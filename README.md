@@ -7,6 +7,7 @@ Sharp, professional charts for economic data with dark theme support.
 - **Modern Dark Theme**: Beautiful dark-themed charts optimized for economic and financial data
 - **Multi-subplot Support**: Easily create charts with multiple synchronized subplots
 - **Unified Spike Lines**: Vertical crosshairs that span all subplots for easy data comparison
+- **Named Color Palette**: 27 colors optimized for dark backgrounds
 - **Fluent API**: Chainable methods for intuitive chart building
 - **Interactive**: Built on Plotly with zoom, pan, and hover capabilities
 - **Configurable**: YAML-based default configuration that's easy to customize
@@ -27,9 +28,9 @@ from econ_charts import EconChart
 dates = pd.date_range('2020-01-01', periods=100, freq='D')
 values = [100 + i * 0.5 + (i % 10) for i in range(100)]
 
-# Create a simple chart
+# Create a simple chart using named colors
 chart = EconChart(num_rows=1, height=400)
-chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='#00d4aa')
+chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
 chart.set_title('Economic Indicator')
 chart.enable_unified_spikeline()
 fig = chart.build()
@@ -39,7 +40,7 @@ fig.show()
 ## Multi-subplot Example
 
 ```python
-from econ_charts import EconChart, DEFAULT_COLORS
+from econ_charts import EconChart
 
 chart = EconChart(
     num_rows=3,
@@ -47,10 +48,10 @@ chart = EconChart(
     height=700,
 )
 
-# Add data to each subplot
-chart.add_line(row=1, x=dates, y=gdp_data, name='GDP', color=DEFAULT_COLORS['background'])
-chart.add_line(row=2, x=dates, y=inflation_data, name='Inflation', color='#ff6b6b')
-chart.add_line(row=3, x=dates, y=unemployment_data, name='Unemployment', color='#4ecdc4')
+# Add data to each subplot using named colors
+chart.add_line(row=1, x=dates, y=gdp_data, name='GDP', color='teal')
+chart.add_line(row=2, x=dates, y=inflation_data, name='Inflation', color='coral')
+chart.add_line(row=3, x=dates, y=unemployment_data, name='Unemployment', color='sky')
 
 # Add reference lines
 chart.add_hline(row=2, y=2.0)  # 2% inflation target
@@ -64,6 +65,35 @@ chart.enable_unified_spikeline()
 
 fig = chart.build()
 fig.show()
+```
+
+## Named Color Palette
+
+Use color names instead of hex codes for cleaner, more readable code:
+
+```python
+from econ_charts import PALETTE
+
+# Available colors (68 total, optimized for dark theme):
+# Primary:     teal, coral, gold, sky, violet, blue, orange, pink
+# Secondary:   mint, salmon, lavender, peach, cyan, lime, rose, amber
+# Neutral:     slate, silver, steel, gray
+# Accent:      white, red, green, yellow, purple
+# Finance:     bull, bear, neutral, dollar
+# Bright:      electric, neon, emerald, amethyst, tangerine, apricot, golden, orchid
+# Plotly:      plotly_blue, plotly_red, plotly_teal, plotly_purple, plotly_orange,
+#              plotly_cyan, plotly_pink, plotly_lime, plotly_magenta, plotly_yellow
+# Colorscales: plasma_*, piyg_* (for diverging data)
+
+# Use in charts
+chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+chart.add_line(row=2, x=dates, y=values, name='CPI', color='coral')
+
+# Hex codes still work
+chart.add_line(row=3, x=dates, y=values, name='Custom', color='#ff00ff')
+
+# View all 68 colors
+print(PALETTE)  # {'teal': '#00d4aa', 'coral': '#ff6b6b', ...}
 ```
 
 ## API Reference

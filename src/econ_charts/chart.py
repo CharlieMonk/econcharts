@@ -74,9 +74,9 @@ class EconChart:
             subplot_titles=('Revenue', 'Costs', 'Profit'),
             height=700,
         )
-        chart.add_line(row=1, x=dates, y=revenue, name='Revenue', color='#00ff00')
-        chart.add_line(row=2, x=dates, y=costs, name='Costs', color='#ff0000')
-        chart.add_line(row=3, x=dates, y=profit, name='Profit', color='#0000ff')
+        chart.add_line(row=1, x=dates, y=revenue, name='Revenue', color='teal')
+        chart.add_line(row=2, x=dates, y=costs, name='Costs', color='coral')
+        chart.add_line(row=3, x=dates, y=profit, name='Profit', color='gold')
         chart.add_hline(row=3, y=0)
         chart.enable_unified_spikeline()
         fig = chart.build()

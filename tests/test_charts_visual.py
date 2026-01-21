@@ -152,7 +152,7 @@ class TestChartGeneration:
         dates, values = generate_gdp_data()
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='#00d4aa')
+        chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
         chart.set_title('GDP Growth Rate')
         chart.set_yaxis(row=1, title='% Change YoY')
         chart.add_hline(row=1, y=0)
@@ -192,9 +192,9 @@ class TestChartGeneration:
             height=700,
         )
 
-        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='#00d4aa')
-        chart.add_line(row=2, x=inf_dates, y=inf_values, name='CPI', color='#ff6b6b')
-        chart.add_line(row=3, x=unemp_dates, y=unemp_values, name='Unemployment', color='#4ecdc4')
+        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
+        chart.add_line(row=2, x=inf_dates, y=inf_values, name='CPI', color='coral')
+        chart.add_line(row=3, x=unemp_dates, y=unemp_values, name='Unemployment', color='sky')
 
         chart.set_yaxis(row=1, title='% YoY')
         chart.set_yaxis(row=2, title='% YoY')
@@ -231,7 +231,7 @@ class TestChartGeneration:
         exp_values = [v * (1.1 ** (i/10)) for i, v in enumerate(values)]
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=exp_values, name='Stock Price', color='#ffd93d')
+        chart.add_line(row=1, x=dates, y=exp_values, name='Stock Price', color='gold')
         chart.set_yaxis(row=1, title='Price ($)', scale_type='log')
         chart.set_title('Stock Price (Log Scale)')
         chart.enable_unified_spikeline()
@@ -258,7 +258,7 @@ class TestScaleAlignment:
         min_val, max_val = min(values), max(values)
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='#ff6b6b')
+        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
         chart.set_title('Inflation Rate')
 
         html_path = html_dir / "scale_test.html"
@@ -294,8 +294,8 @@ class TestScaleAlignment:
         rates = rates[:min_len]
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=gdp, name='GDP Growth', color='#00d4aa')
-        chart.add_line(row=1, x=dates, y=rates, name='Interest Rate', color='#ff6b6b')
+        chart.add_line(row=1, x=dates, y=gdp, name='GDP Growth', color='teal')
+        chart.add_line(row=1, x=dates, y=rates, name='Interest Rate', color='coral')
         chart.set_title('GDP vs Interest Rates')
 
         html_path = html_dir / "multi_series_scale.html"
@@ -332,7 +332,7 @@ class TestHoverTooltips:
         values = [10.0, 20.0, 30.0, 25.0, 35.0, 45.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0]
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Test Data', color='#00d4aa')
+        chart.add_line(row=1, x=dates, y=values, name='Test Data', color='teal')
         chart.set_title('Hover Test')
         chart.enable_unified_spikeline()
 
@@ -380,7 +380,7 @@ class TestHoverTooltips:
         values = [100.5, 200.25, 150.75, 175.0, 225.5, 250.0, 275.25, 300.0, 325.5, 350.75, 375.0, 400.25]
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Accurate Data', color='#4ecdc4')
+        chart.add_line(row=1, x=dates, y=values, name='Accurate Data', color='sky')
 
         html_path = html_dir / "hover_accuracy.html"
         chart.to_html(str(html_path))
@@ -413,7 +413,7 @@ class TestZoomFunctionality:
         dates, values = generate_gdp_data()
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='#00d4aa')
+        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         chart.set_title('Zoom Test')
 
         html_path = html_dir / "zoom_test.html"
@@ -477,7 +477,7 @@ class TestZoomFunctionality:
         dates, values = generate_inflation_data()
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='#ff6b6b')
+        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
 
         html_path = html_dir / "zoom_reset_test.html"
         chart.to_html(str(html_path))
@@ -548,8 +548,8 @@ class TestDOMStructure:
         dates, values = generate_gdp_data()
 
         chart = EconChart(num_rows=2, subplot_titles=('Chart 1', 'Chart 2'), height=500)
-        chart.add_line(row=1, x=dates, y=values, name='Series 1', color='#00d4aa')
-        chart.add_line(row=2, x=dates, y=[v * 0.5 for v in values], name='Series 2', color='#ff6b6b')
+        chart.add_line(row=1, x=dates, y=values, name='Series 1', color='teal')
+        chart.add_line(row=2, x=dates, y=[v * 0.5 for v in values], name='Series 2', color='coral')
         chart.set_title('DOM Test Chart')
         chart.set_legend(orientation='h', position='top')
 
@@ -594,9 +594,9 @@ class TestDOMStructure:
 
         titles = ('GDP Growth', 'Inflation Rate', 'Unemployment')
         chart = EconChart(num_rows=3, subplot_titles=titles, height=700)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='#00d4aa')
-        chart.add_line(row=2, x=dates, y=[v * 0.3 for v in values], name='Inflation', color='#ff6b6b')
-        chart.add_line(row=3, x=dates, y=[abs(v) * 0.2 for v in values], name='Unemployment', color='#4ecdc4')
+        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+        chart.add_line(row=2, x=dates, y=[v * 0.3 for v in values], name='Inflation', color='coral')
+        chart.add_line(row=3, x=dates, y=[abs(v) * 0.2 for v in values], name='Unemployment', color='sky')
 
         html_path = html_dir / "subplot_titles.html"
         chart.to_html(str(html_path))
@@ -632,7 +632,7 @@ class TestColorTheme:
         dates, values = generate_stock_data()
 
         chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Stock', color='#ffd93d')
+        chart.add_line(row=1, x=dates, y=values, name='Stock', color='gold')
         chart.set_title('Dark Theme Test')
 
         html_path = html_dir / "dark_theme.html"

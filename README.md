@@ -22,7 +22,7 @@ pip install econ-charts
 
 ```python
 import pandas as pd
-from econ_charts import EconChart
+from src import EconChart
 
 # Sample data
 dates = pd.date_range('2020-01-01', periods=100, freq='D')
@@ -40,7 +40,7 @@ fig.show()
 ## Multi-subplot Example
 
 ```python
-from econ_charts import EconChart
+from src import EconChart
 
 chart = EconChart(
     num_rows=3,
@@ -72,7 +72,7 @@ fig.show()
 Use color names instead of hex codes for cleaner, more readable code:
 
 ```python
-from econ_charts import PALETTE
+from src import PALETTE
 
 # Available colors (68 total, optimized for dark theme):
 # Primary:     teal, coral, gold, sky, violet, blue, orange, pink

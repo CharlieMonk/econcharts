@@ -45,6 +45,14 @@ class EconChart:
     _defaults = _load_yaml('defaults.yaml')
     palette = _load_yaml('colors.yaml')
 
+    # Default theme colors
+    _text_color = _defaults['colors']['text']
+    _grid_color = _defaults['colors']['grid']
+    _paper_color = _defaults['colors']['paper']
+    _bg_color = _defaults['colors']['background']
+    _zero_line_color = _defaults['colors']['zero_line']
+    _spike_color = _defaults['colors']['spike']
+
     def __init__(
         self,
         num_rows: int,
@@ -68,18 +76,21 @@ class EconChart:
             height: Chart height in pixels
         """
         self.num_rows = num_rows
-        self._colors = colors or self._defaults['colors'].copy()
         self.height = height or self._defaults['chart']['height']
         self._spike_enabled = False
-        self._spike_color = self._colors.get('spike', self._defaults['colors']['spike'])
         self._x_range: tuple | None = None
 
-        # Cache frequently used colors
-        self._text_color = self._colors.get('text', self._defaults['colors']['text'])
-        self._grid_color = self._colors.get('grid', self._defaults['colors']['grid'])
-        self._paper_color = self._colors.get('paper', self._defaults['colors']['paper'])
-        self._bg_color = self._colors.get('background', self._defaults['colors']['background'])
-        self._zero_line_color = self._colors.get('zero_line', self._defaults['colors']['zero_line'])
+        # Override default colors if custom colors provided
+        if colors:
+            self._colors = colors
+            self._text_color = colors.get('text', self._defaults['colors']['text'])
+            self._grid_color = colors.get('grid', self._defaults['colors']['grid'])
+            self._paper_color = colors.get('paper', self._defaults['colors']['paper'])
+            self._bg_color = colors.get('background', self._defaults['colors']['background'])
+            self._zero_line_color = colors.get('zero_line', self._defaults['colors']['zero_line'])
+            self._spike_color = colors.get('spike', self._defaults['colors']['spike'])
+        else:
+            self._colors = self._defaults['colors'].copy()
 
         # Apply defaults
         shared_xaxes = shared_xaxes if shared_xaxes is not None else self._defaults['chart']['shared_xaxes']

@@ -17,11 +17,11 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright, Page, expect
 
-# Add repo root to path for local testing
+# Add src to path for local testing
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src import EconChart, DEFAULT_COLORS
+from econ_charts import EconChart, DEFAULT_COLORS
 
 
 def wait_for_plotly_ready(page, timeout=10000):

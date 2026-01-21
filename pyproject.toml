@@ -53,11 +53,11 @@ Repository = "https://github.com/econ-charts/econ-charts"
 Issues = "https://github.com/econ-charts/econ-charts/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/econ_charts"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/src",
+    "/src/econ_charts",
     "/tests",
     "/README.md",
     "/LICENSE",

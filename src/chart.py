@@ -39,28 +39,6 @@ _LEGEND_POSITIONS = _DEFAULTS['legend_positions']
 DEFAULT_COLORS = _DEFAULT_COLORS.copy()
 
 
-def resolve_color(color: str) -> str:
-    """
-    Resolve a color name to its hex value.
-
-    Args:
-        color: Either a hex color string (e.g., '#ff0000') or a named color
-               from the palette (e.g., 'teal', 'coral')
-
-    Returns:
-        Hex color string
-
-    Examples:
-        >>> resolve_color('teal')
-        '#00d4aa'
-        >>> resolve_color('#ff0000')
-        '#ff0000'
-    """
-    if color.startswith(('#', 'rgb')):
-        return color
-    return PALETTE.get(color.lower(), color)
-
-
 class EconChart:
     """
     A configurable multi-subplot chart builder with dark theme support.
@@ -163,6 +141,28 @@ class EconChart:
         """Theme colors dictionary."""
         return self._colors
 
+    @staticmethod
+    def resolve_color(color: str) -> str:
+        """
+        Resolve a color name to its hex value.
+
+        Args:
+            color: Either a hex color string (e.g., '#ff0000') or a named color
+                   from the palette (e.g., 'teal', 'coral')
+
+        Returns:
+            Hex color string
+
+        Examples:
+            >>> EconChart.resolve_color('teal')
+            '#00d4aa'
+            >>> EconChart.resolve_color('#ff0000')
+            '#ff0000'
+        """
+        if color.startswith(('#', 'rgb')):
+            return color
+        return PALETTE.get(color.lower(), color)
+
     def _add_trace(
         self,
         row: int,
@@ -216,7 +216,7 @@ class EconChart:
             Self for method chaining
         """
         line_dict: dict[str, Any] = {
-            'color': resolve_color(color),
+            'color': self.resolve_color(color),
             'width': width or _DEFAULT_LINE_WIDTH,
         }
         if dash:
@@ -271,7 +271,7 @@ class EconChart:
             name=name,
             trace_kwargs={
                 'mode': 'markers',
-                'marker': dict(color=resolve_color(color), size=marker_size or _DEFAULT_MARKER_SIZE),
+                'marker': dict(color=self.resolve_color(color), size=marker_size or _DEFAULT_MARKER_SIZE),
                 'visible': visible,
                 'showlegend': showlegend,
             },

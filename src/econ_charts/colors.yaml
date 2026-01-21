@@ -1,0 +1,88 @@
+# Named color palette for data series (optimized for dark theme)
+# Use these names in add_line/add_scatter color parameter
+
+# Primary colors - high visibility
+teal: "#00d4aa"
+coral: "#ff6b6b"
+gold: "#ffd93d"
+sky: "#4ecdc4"
+violet: "#9b59b6"
+blue: "#3498db"
+orange: "#e67e22"
+pink: "#e91e63"
+
+# Secondary colors - softer tones
+mint: "#98d8c8"
+salmon: "#f7a399"
+lavender: "#b39ddb"
+peach: "#ffab91"
+cyan: "#80deea"
+lime: "#c5e1a5"
+rose: "#f48fb1"
+amber: "#ffe082"
+
+# Neutral/muted colors
+slate: "#78909c"
+silver: "#b0bec5"
+steel: "#607d8b"
+gray: "#b8b8b8"
+
+# High contrast colors
+white: "#ffffff"
+red: "#ef5350"
+green: "#66bb6a"
+yellow: "#ffee58"
+purple: "#ab47bc"
+
+# Finance-specific colors
+bull: "#26a69a"
+bear: "#ef5350"
+neutral: "#78909c"
+dollar: "#85bb65"
+
+# Plotly default colors
+plotly_blue: "#636efa"
+plotly_red: "#EF553B"
+plotly_teal: "#00cc96"
+plotly_purple: "#ab63fa"
+plotly_orange: "#FFA15A"
+plotly_cyan: "#19d3f3"
+plotly_pink: "#FF6692"
+plotly_lime: "#B6E880"
+plotly_magenta: "#FF97FF"
+plotly_yellow: "#FECB52"
+
+# Bright/vivid colors
+electric: "#00d4ff"
+neon: "#00ff88"
+emerald: "#26de81"
+amethyst: "#a55eea"
+tangerine: "#ff7f50"
+apricot: "#ff9f43"
+golden: "#ffd700"
+orchid: "#da70d6"
+
+# Colorscale colors (Plasma)
+plasma_dark: "#0d0887"
+plasma_purple: "#46039f"
+plasma_violet: "#7201a8"
+plasma_magenta: "#9c179e"
+plasma_pink: "#bd3786"
+plasma_salmon: "#d8576b"
+plasma_orange: "#ed7953"
+plasma_amber: "#fb9f3a"
+plasma_yellow: "#fdca26"
+plasma_bright: "#f0f921"
+
+# Colorscale colors (PiYG diverging)
+piyg_magenta: "#8e0152"
+piyg_pink: "#c51b7d"
+piyg_rose: "#de77ae"
+piyg_blush: "#f1b6da"
+piyg_light_pink: "#fde0ef"
+piyg_neutral: "#f7f7f7"
+piyg_light_green: "#e6f5d0"
+piyg_lime: "#b8e186"
+piyg_green: "#7fbc41"
+piyg_olive: "#4d9221"
+piyg_dark_green: "#276419"

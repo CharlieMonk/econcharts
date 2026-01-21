@@ -17,10 +17,48 @@ def _load_defaults() -> dict:
         return yaml.safe_load(f)
 
 
+def _load_palette() -> dict:
+    """Load color palette from YAML file."""
+    colors_path = os.path.join(os.path.dirname(__file__), 'colors.yaml')
+    with open(colors_path, 'r') as f:
+        return yaml.safe_load(f)
+
+
 _DEFAULTS = _load_defaults()
 
 # Export DEFAULT_COLORS for backward compatibility
 DEFAULT_COLORS = _DEFAULTS['colors'].copy()
+
+# Export color palette for user reference
+PALETTE = _load_palette()
+
+
+def resolve_color(color: str) -> str:
+    """
+    Resolve a color name to its hex value.
+
+    Args:
+        color: Either a hex color string (e.g., '#ff0000') or a named color
+               from the palette (e.g., 'teal', 'coral')
+
+    Returns:
+        Hex color string
+
+    Examples:
+        >>> resolve_color('teal')
+        '#00d4aa'
+        >>> resolve_color('#ff0000')
+        '#ff0000'
+    """
+    # If it looks like a hex color or rgba, return as-is
+    if color.startswith('#') or color.startswith('rgb'):
+        return color
+    # Look up in palette (case-insensitive)
+    color_lower = color.lower()
+    if color_lower in PALETTE:
+        return PALETTE[color_lower]
+    # Return as-is if not found (let Plotly handle it)
+    return color
 
 
 class EconChart:
@@ -143,7 +181,7 @@ class EconChart:
             x: X-axis data
             y: Y-axis data
             name: Trace name for legend
-            color: Line color
+            color: Line color (hex like '#ff0000' or name like 'teal', 'coral')
             width: Line width
             dash: Line dash style ('solid', 'dot', 'dash', 'longdash', 'dashdot')
             hover_template: Custom hover template
@@ -157,7 +195,8 @@ class EconChart:
         if width is None:
             width = _DEFAULTS['line']['width']
 
-        line_dict: dict[str, Any] = {'color': color, 'width': width}
+        resolved_color = resolve_color(color)
+        line_dict: dict[str, Any] = {'color': resolved_color, 'width': width}
         if dash:
             line_dict['dash'] = dash
 
@@ -202,7 +241,7 @@ class EconChart:
             x: X-axis data
             y: Y-axis data
             name: Trace name for legend
-            color: Marker color
+            color: Marker color (hex like '#ff0000' or name like 'teal', 'coral')
             marker_size: Marker size
             hover_template: Custom hover template
             visible: True, False, or 'legendonly'
@@ -215,12 +254,13 @@ class EconChart:
         if marker_size is None:
             marker_size = _DEFAULTS['scatter']['marker_size']
 
+        resolved_color = resolve_color(color)
         trace_kwargs: dict[str, Any] = {
             'x': x,
             'y': y,
             'name': name,
             'mode': 'markers',
-            'marker': dict(color=color, size=marker_size),
+            'marker': dict(color=resolved_color, size=marker_size),
             'visible': visible,
             'showlegend': showlegend,
         }

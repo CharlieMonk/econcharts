@@ -28,16 +28,21 @@ from fred import (
     fetch_gdp, fetch_inflation, fetch_unemployment,
     fetch_fed_funds, fetch_sp500, fetch_treasury_10y
 )
+from recessions import NBER_RECESSIONS, get_recessions_in_range
 
 
-def wait_for_plotly_ready(page, timeout=10000):
+def wait_for_plotly_ready(page, timeout=30000):
     """Wait for Plotly to fully initialize and render."""
     page.wait_for_selector('.js-plotly-plot', timeout=timeout)
     page.wait_for_load_state('networkidle')
     # Wait for Plotly to populate its internal data structures
+    # Note: Check for any xaxis (including xaxis3) since unified spikeline removes xaxis/xaxis2
     page.wait_for_function('''() => {
         const gd = document.querySelector('.js-plotly-plot');
-        return gd && gd._fullLayout && gd._fullLayout.xaxis && gd.data && gd.data.length > 0;
+        if (!gd || !gd._fullLayout || !gd.data || gd.data.length === 0) return false;
+        // Check for any x-axis (xaxis, xaxis2, xaxis3, etc.)
+        const hasXAxis = Object.keys(gd._fullLayout).some(k => k.startsWith('xaxis'));
+        return hasXAxis;
     }''', timeout=timeout)
     # Small additional wait to ensure rendering is complete
     page.wait_for_timeout(200)
@@ -623,6 +628,335 @@ class TestColorTheme:
             assert colors['plot'] == '#0f0f23'
 
             page.screenshot(path=str(screenshots_dir / "custom_colors.png"))
+            browser.close()
+
+
+class TestRecessionShading:
+    """Test recession shading functionality."""
+
+    def test_recession_shading_basic(self, html_dir, screenshots_dir):
+        """Test that recession shading is applied by default."""
+        dates, values = get_unemployment_data()
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
+        # Recession shading is now enabled by default - no need to call add_recession_shading()
+        chart.set_title('Unemployment with Recession Shading')
+        chart.set_yaxis(row=1, title='%')
+        chart.enable_unified_spikeline()
+
+        html_path = html_dir / "recession_basic.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Verify shapes (vrects) are present for recession shading
+            shape_count = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
+            }''')
+
+            assert shape_count >= 1, "No recession shading shapes found"
+
+            page.screenshot(path=str(screenshots_dir / "recession_basic.png"))
+            browser.close()
+
+    def test_recession_shading_alignment(self, html_dir, screenshots_dir):
+        """Test that recession shading aligns with the time axis."""
+        dates, values = get_gdp_data()
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+        # Recession shading is enabled by default
+        chart.set_title('GDP with Recession Shading')
+        chart.add_hline(row=1, y=0)
+
+        html_path = html_dir / "recession_alignment.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Get shapes and verify their x0/x1 are datetime values
+            shapes = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                if (!gd._fullLayout.shapes) return [];
+                return gd._fullLayout.shapes.map(s => ({
+                    x0: s.x0,
+                    x1: s.x1,
+                    type: s.type
+                }));
+            }''')
+
+            # Verify at least one shape exists and has valid coordinates
+            assert len(shapes) >= 1, "No recession shading shapes found"
+
+            # Verify x0 < x1 for all shapes (proper time ordering)
+            for shape in shapes:
+                assert shape['x0'] < shape['x1'], f"Invalid shape coordinates: x0={shape['x0']}, x1={shape['x1']}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_alignment.png"))
+            browser.close()
+
+    def test_recession_shading_dynamic_zoom(self, html_dir, screenshots_dir):
+        """Test that recession shading adjusts when zooming."""
+        dates, values = get_unemployment_data()
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
+        # Recession shading is enabled by default
+        chart.set_title('Recession Shading Zoom Test')
+
+        html_path = html_dir / "recession_zoom.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Take initial screenshot
+            page.screenshot(path=str(screenshots_dir / "recession_zoom_before.png"))
+
+            # Get initial x-axis range
+            initial_range = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.xaxis.range;
+            }''')
+
+            # Perform zoom by dragging
+            bounds = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                const xa = gd._fullLayout.xaxis;
+                const rect = gd.getBoundingClientRect();
+                return {
+                    x0: rect.left + xa._offset,
+                    x1: rect.left + xa._offset + xa._length,
+                    y: rect.top + 100
+                };
+            }''')
+
+            # Drag to zoom to right half of chart
+            start_x = bounds['x0'] + (bounds['x1'] - bounds['x0']) / 2
+            end_x = bounds['x1'] - 20
+            y = bounds['y']
+
+            page.mouse.move(start_x, y)
+            page.mouse.down()
+            page.mouse.move(end_x, y + 50)
+            page.mouse.up()
+            page.wait_for_timeout(500)
+
+            # Take zoomed screenshot
+            page.screenshot(path=str(screenshots_dir / "recession_zoom_after.png"))
+
+            # Verify x-axis range changed
+            new_range = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.xaxis.range;
+            }''')
+
+            assert new_range != initial_range, "Zoom did not change axis range"
+
+            # Verify recession shapes are still present after zoom
+            shape_count = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
+            }''')
+
+            assert shape_count >= 1, "Recession shapes missing after zoom"
+
+            browser.close()
+
+    def test_recession_shading_multi_subplot(self, html_dir, screenshots_dir):
+        """Test recession shading on multi-subplot charts."""
+        gdp_dates, gdp_values = get_gdp_data()
+        unemp_dates, unemp_values = get_unemployment_data()
+        inf_dates, inf_values = get_inflation_data()
+
+        chart = econcharts(
+            num_rows=3,
+            subplot_titles=('GDP Growth', 'Unemployment', 'Inflation'),
+            height=700,
+        )
+
+        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
+        chart.add_line(row=2, x=unemp_dates, y=unemp_values, name='Unemployment', color='coral')
+        chart.add_line(row=3, x=inf_dates, y=inf_values, name='Inflation', color='sky')
+
+        # Recession shading is enabled by default and applies to all rows
+        chart.add_hline(row=1, y=0)
+        chart.add_hline(row=3, y=2.0)
+        chart.enable_unified_spikeline()
+
+        html_path = html_dir / "recession_multi_subplot.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Count shapes - should have shapes for each subplot
+            shape_count = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
+            }''')
+
+            # Should have shapes for multiple recessions across 3 subplots
+            assert shape_count >= 3, f"Expected at least 3 recession shapes, got {shape_count}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_multi_subplot.png"))
+            browser.close()
+
+    def test_recession_shading_single_row(self, html_dir, screenshots_dir):
+        """Test recession shading on a specific row only."""
+        gdp_dates, gdp_values = get_gdp_data()
+        unemp_dates, unemp_values = get_unemployment_data()
+
+        chart = econcharts(
+            num_rows=2,
+            subplot_titles=('GDP Growth', 'Unemployment'),
+            height=500,
+        )
+
+        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
+        chart.add_line(row=2, x=unemp_dates, y=unemp_values, name='Unemployment', color='coral')
+
+        # Configure recession shading to apply only to row 2
+        chart.configure_recession_shading(row=2)
+
+        html_path = html_dir / "recession_single_row.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Get shapes and their yref to verify they're only on row 2
+            shapes = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                if (!gd._fullLayout.shapes) return [];
+                return gd._fullLayout.shapes.map(s => ({
+                    yref: s.yref
+                }));
+            }''')
+
+            # All shapes should reference y2 (row 2)
+            for shape in shapes:
+                assert 'y2' in shape['yref'], f"Shape not on row 2: {shape['yref']}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_single_row.png"))
+            browser.close()
+
+    def test_recession_shading_custom_periods(self, html_dir, screenshots_dir):
+        """Test custom recession periods."""
+        dates, values = get_gdp_data()
+
+        # Define custom recession periods
+        custom_recessions = [
+            (datetime(2007, 12, 1), datetime(2009, 6, 1)),  # Great Recession
+            (datetime(2020, 2, 1), datetime(2020, 4, 1)),   # COVID
+        ]
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+        chart.configure_recession_shading(recessions=custom_recessions)
+        chart.set_title('GDP with Custom Recession Periods')
+
+        html_path = html_dir / "recession_custom.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            shape_count = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
+            }''')
+
+            # Should have exactly 2 shapes (one for each custom period)
+            assert shape_count == 2, f"Expected 2 recession shapes, got {shape_count}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_custom.png"))
+            browser.close()
+
+    def test_recession_shading_custom_color(self, html_dir, screenshots_dir):
+        """Test custom recession shading color and opacity."""
+        dates, values = get_unemployment_data()
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
+        chart.configure_recession_shading(color='red', opacity=0.25)
+        chart.set_title('Unemployment with Custom Recession Color')
+
+        html_path = html_dir / "recession_custom_color.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Verify shape fillcolor
+            shapes = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                if (!gd._fullLayout.shapes) return [];
+                return gd._fullLayout.shapes.map(s => ({
+                    fillcolor: s.fillcolor,
+                    opacity: s.opacity
+                }));
+            }''')
+
+            # Verify at least one shape has the custom color
+            assert len(shapes) >= 1, "No recession shapes found"
+            # Check that opacity is set correctly
+            assert shapes[0]['opacity'] == 0.25, f"Expected opacity 0.25, got {shapes[0]['opacity']}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_custom_color.png"))
+            browser.close()
+
+    def test_recession_shading_disabled(self, html_dir, screenshots_dir):
+        """Test that recession shading can be disabled."""
+        dates, values = get_gdp_data()
+
+        chart = econcharts(num_rows=1, height=400)
+        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+        chart.disable_recession_shading()  # Disable the default recession shading
+        chart.set_title('GDP without Recession Shading')
+
+        html_path = html_dir / "recession_disabled.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            shape_count = page.evaluate('''() => {
+                const gd = document.querySelector('.js-plotly-plot');
+                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
+            }''')
+
+            assert shape_count == 0, f"Expected no shapes when disabled, got {shape_count}"
+
+            page.screenshot(path=str(screenshots_dir / "recession_disabled.png"))
             browser.close()
 
 

@@ -39,6 +39,7 @@ bull: "#26a69a"
 bear: "#ef5350"
 neutral: "#78909c"
 dollar: "#85bb65"
+recession: "#808080"
 
 # Plotly default colors
 plotly_blue: "#636efa"

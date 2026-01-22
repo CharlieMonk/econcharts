@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from datetime import datetime
+from typing import Any, Sequence
 
 import yaml
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+from econcharts.recessions import NBER_RECESSIONS, get_recessions_in_range
 
 
 _MODULE_DIR = os.path.dirname(__file__)
@@ -78,6 +81,8 @@ class EconChart:
         self.num_rows = num_rows
         self.height = height or self._defaults['chart']['height']
         self._spike_enabled = False
+        self._recession_enabled = True
+        self._recession_config: dict[str, Any] = {}
         self._x_range: tuple | None = None
 
         # Override default colors if custom colors provided
@@ -387,6 +392,116 @@ class EconChart:
         )
         return self
 
+    def disable_recession_shading(self) -> EconChart:
+        """
+        Disable automatic recession shading.
+
+        By default, recession shading is enabled and will be applied when
+        the chart is built. Call this method to disable it.
+
+        Returns:
+            Self for method chaining.
+
+        Example:
+            chart = econcharts(num_rows=1)
+            chart.add_line(row=1, x=dates, y=values, name='Data', color='teal')
+            chart.disable_recession_shading()  # No recession shading
+            chart.show()
+        """
+        self._recession_enabled = False
+        return self
+
+    def configure_recession_shading(
+        self,
+        row: int | str = 'all',
+        recessions: Sequence[tuple[datetime, datetime]] | None = None,
+        color: str | None = None,
+        opacity: float | None = None,
+    ) -> EconChart:
+        """
+        Configure recession shading options.
+
+        Recession shading is enabled by default. Use this method to customize
+        the appearance or specify custom recession periods.
+
+        Args:
+            row: Row number (1-indexed) or 'all' to apply to all rows.
+            recessions: Custom list of (start, end) datetime tuples defining
+                recession periods. If None, uses NBER recession dates.
+            color: Fill color for recession shading. Defaults to gray.
+            opacity: Fill opacity (0-1). Defaults from config.
+
+        Returns:
+            Self for method chaining.
+
+        Example:
+            # Custom recession periods with custom color
+            from datetime import datetime
+            custom = [
+                (datetime(2007, 12, 1), datetime(2009, 6, 1)),
+                (datetime(2020, 2, 1), datetime(2020, 4, 1)),
+            ]
+            chart.configure_recession_shading(recessions=custom, color='red', opacity=0.2)
+        """
+        self._recession_config = {
+            'row': row,
+            'recessions': recessions,
+            'color': color,
+            'opacity': opacity,
+        }
+        return self
+
+    def _apply_recession_shading(self) -> None:
+        """Apply recession shading to the chart."""
+        # Get config or defaults
+        config = self._recession_config
+        row = config.get('row', 'all')
+        recessions = config.get('recessions')
+        color = config.get('color')
+        opacity = config.get('opacity')
+
+        # Get recession defaults
+        recession_defaults = self._defaults.get('recession', {})
+        fill_color = color or recession_defaults.get('color', 'gray')
+        fill_opacity = opacity if opacity is not None else recession_defaults.get('opacity', 0.15)
+
+        # Resolve named color
+        fill_color = self.resolve_color(fill_color)
+
+        # Use NBER recessions if not specified
+        recession_periods = recessions if recessions is not None else NBER_RECESSIONS
+
+        # Filter recessions to the current x-axis range if available
+        if self._x_range is not None:
+            try:
+                start_dt = self._x_range[0]
+                end_dt = self._x_range[1]
+                # Convert to datetime if needed
+                if hasattr(start_dt, 'to_pydatetime'):
+                    start_dt = start_dt.to_pydatetime()
+                if hasattr(end_dt, 'to_pydatetime'):
+                    end_dt = end_dt.to_pydatetime()
+                recession_periods = get_recessions_in_range(start_dt, end_dt, recession_periods)
+            except (TypeError, AttributeError):
+                # If x-axis isn't datetime-compatible, skip recession shading
+                return
+
+        # Add recession shading using add_vrect with row parameter
+        # exclude_empty_subplots=False ensures shapes are added even after
+        # traces are moved to the bottom axis by unified spikeline
+        for rec_start, rec_end in recession_periods:
+            self.fig.add_vrect(
+                x0=rec_start,
+                x1=rec_end,
+                fillcolor=fill_color,
+                opacity=fill_opacity,
+                layer='below',
+                line_width=0,
+                row=row,
+                col=1,
+                exclude_empty_subplots=False,
+            )
+
     def enable_unified_spikeline(self, spike_color: str | None = None) -> EconChart:
         """
         Enable spike lines that span all subplots.
@@ -482,13 +597,27 @@ class EconChart:
         """
         Finalize and return the Plotly figure.
 
-        Applies unified spike line if enabled.
+        Applies recession shading (enabled by default) and unified spike line if enabled.
 
         Returns:
             Plotly Figure object
         """
+        # Apply unified spikeline first (modifies axis bindings)
         if self._spike_enabled:
             self._apply_unified_spikeline()
+
+        # Apply recession shading
+        if self._recession_enabled:
+            self._apply_recession_shading()
+
+            # When unified spikeline is enabled, shapes reference axes that are
+            # now "matched" to the bottom axis, causing them not to render.
+            # Fix by updating all shapes to reference the bottom x-axis.
+            if self._spike_enabled and self.fig.layout.shapes:
+                bottom_xaxis = f'x{self.num_rows}'
+                for shape in self.fig.layout.shapes:
+                    shape.xref = bottom_xaxis
+
         return self.fig
 
     def show(self) -> None:
@@ -534,6 +663,8 @@ class EconChart:
         self.fig.update_traces(xaxis=bottom_xaxis)
 
         # Add invisible traces to upper axes to force tick label rendering
+        # These must be bound to the bottom x-axis (like all other traces) so that
+        # shapes with xref=bottom_xaxis and yref=y/y2 domain render correctly
         if self._x_range is not None:
             invisible_marker = dict(opacity=0)
             x_range_list = list(self._x_range)
@@ -546,7 +677,7 @@ class EconChart:
                     marker=invisible_marker,
                     showlegend=False,
                     hoverinfo='skip',
-                    xaxis=f'x{axis_suffix}',
+                    xaxis=bottom_xaxis,
                     yaxis=f'y{axis_suffix}',
                 ))
 

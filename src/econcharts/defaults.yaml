@@ -50,6 +50,11 @@ hline:
   dash: "dash"
   width: 1
 
+# Recession shading defaults
+recession:
+  color: "gray"
+  opacity: 0.15
+
 # Legend position presets
 legend_positions:
   top:

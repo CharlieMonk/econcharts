@@ -1,4 +1,4 @@
-"""Visual tests for econ-charts using Playwright.
+"""Visual tests for econcharts using Playwright.
 
 These tests:
 1. Use real economic data from FRED (Federal Reserve Economic Data)

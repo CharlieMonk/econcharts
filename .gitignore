@@ -34,6 +34,7 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
+notebooks/econ_charts_demo_executed.ipynb
 
 # Testing
 .pytest_cache/

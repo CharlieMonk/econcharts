@@ -1,4 +1,4 @@
-"""Pytest configuration and fixtures for econ-charts tests."""
+"""Pytest configuration and fixtures for econcharts tests."""
 
 import os
 import pytest

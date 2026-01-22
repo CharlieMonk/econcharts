@@ -1,4 +1,4 @@
-# econ-charts
+# econcharts
 
 Sharp, professional charts for economic data with dark theme support.
 
@@ -15,7 +15,7 @@ Sharp, professional charts for economic data with dark theme support.
 ## Installation
 
 ```bash
-pip install econ-charts
+pip install econcharts
 ```
 
 ## Quick Start

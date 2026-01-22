@@ -1,1 +1,1 @@
-# Tests for econ-charts
+# Tests for econcharts

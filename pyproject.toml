@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "econ-charts"
+name = "econcharts"
 version = "0.1.0"
 description = "Sharp, professional charts for economic data with dark theme"
 readme = "README.md"
@@ -47,10 +47,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/econ-charts/econ-charts"
-Documentation = "https://github.com/econ-charts/econ-charts#readme"
-Repository = "https://github.com/econ-charts/econ-charts"
-Issues = "https://github.com/econ-charts/econ-charts/issues"
+Homepage = "https://github.com/econcharts/econcharts"
+Documentation = "https://github.com/econcharts/econcharts#readme"
+Repository = "https://github.com/econcharts/econcharts"
+Issues = "https://github.com/econcharts/econcharts/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/econcharts"]

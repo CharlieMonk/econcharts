@@ -1,16 +1,17 @@
 """Visual tests for econ-charts using Playwright.
 
 These tests:
-1. Generate charts with various economic data
-2. Export to HTML
+1. Use real economic data from FRED (Federal Reserve Economic Data)
+2. Export charts to HTML
 3. Use Playwright to examine DOM structure
 4. Take screenshots
 5. Test hover tooltips for correct datapoints
 6. Test zoom functionality
+
+Data is cached locally for offline/CI use.
 """
 
 import json
-import math
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -20,8 +21,13 @@ from playwright.sync_api import sync_playwright, Page, expect
 # Add src to path for local testing
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "econcharts"))
 
 import econcharts
+from fred import (
+    fetch_gdp, fetch_inflation, fetch_unemployment,
+    fetch_fed_funds, fetch_sp500, fetch_treasury_10y
+)
 
 
 def wait_for_plotly_ready(page, timeout=10000):
@@ -37,111 +43,30 @@ def wait_for_plotly_ready(page, timeout=10000):
     page.wait_for_timeout(200)
 
 
-# Sample data generators
-def generate_gdp_data(start_year: int = 2000, years: int = 24):
-    """Generate sample GDP growth data."""
-    import random
-    random.seed(42)  # Reproducible
-    dates = []
-    values = []
-    base = 100
-    for year in range(start_year, start_year + years):
-        for quarter in range(1, 5):
-            month = (quarter - 1) * 3 + 1
-            dates.append(datetime(year, month, 1))
-            # Simulate GDP with trend and cycles
-            growth = 2.5 + math.sin(year / 3) * 1.5 + random.uniform(-0.5, 0.5)
-            # Add recession in 2008-2009 and 2020
-            if 2008 <= year <= 2009:
-                growth = -3 + random.uniform(-2, 1)
-            elif year == 2020 and quarter <= 2:
-                growth = -8 + random.uniform(-2, 2)
-            values.append(growth)
-    return dates, values
+# Real FRED data functions (with caching for offline use)
+def get_gdp_data():
+    """Get real GDP growth data from FRED."""
+    return fetch_gdp(start="2000-01-01")
 
 
-def generate_inflation_data(start_year: int = 2000, years: int = 24):
-    """Generate sample inflation data."""
-    import random
-    random.seed(43)
-    dates = []
-    values = []
-    for year in range(start_year, start_year + years):
-        for month in range(1, 13):
-            dates.append(datetime(year, month, 1))
-            # Base inflation around 2-3%
-            inflation = 2.5 + math.sin(year / 4) * 1.0 + random.uniform(-0.3, 0.3)
-            # High inflation in 2022
-            if year >= 2021:
-                inflation = 5 + (year - 2021) * 2 + random.uniform(-0.5, 0.5)
-            if year >= 2023:
-                inflation = 6 - (year - 2022) * 1.5 + random.uniform(-0.5, 0.5)
-            values.append(max(0, inflation))
-    return dates, values
+def get_inflation_data():
+    """Get real inflation data from FRED."""
+    return fetch_inflation(start="2000-01-01")
 
 
-def generate_unemployment_data(start_year: int = 2000, years: int = 24):
-    """Generate sample unemployment data."""
-    import random
-    random.seed(44)
-    dates = []
-    values = []
-    for year in range(start_year, start_year + years):
-        for month in range(1, 13):
-            dates.append(datetime(year, month, 1))
-            # Base unemployment 4-6%
-            rate = 5 + math.sin(year / 5) * 1.5 + random.uniform(-0.2, 0.2)
-            # Spikes in recessions
-            if 2008 <= year <= 2010:
-                rate = 7 + (year - 2008) * 1.5 + random.uniform(-0.3, 0.3)
-            elif year == 2020:
-                rate = 8 + random.uniform(-0.5, 2)
-            values.append(max(3, rate))
-    return dates, values
+def get_unemployment_data():
+    """Get real unemployment data from FRED."""
+    return fetch_unemployment(start="2000-01-01")
 
 
-def generate_stock_data(start_year: int = 2020, years: int = 4):
-    """Generate sample stock price data."""
-    import random
-    random.seed(45)
-    dates = []
-    values = []
-    price = 100
-    for year in range(start_year, start_year + years):
-        for month in range(1, 13):
-            for day in [1, 8, 15, 22]:
-                try:
-                    dates.append(datetime(year, month, day))
-                    # Random walk with drift
-                    price = price * (1 + random.uniform(-0.02, 0.025))
-                    values.append(price)
-                except ValueError:
-                    pass
-    return dates, values
+def get_stock_data():
+    """Get real S&P 500 data from FRED."""
+    return fetch_sp500(start="2020-01-01")
 
 
-def generate_interest_rate_data(start_year: int = 2000, years: int = 24):
-    """Generate sample interest rate data."""
-    import random
-    random.seed(46)
-    dates = []
-    values = []
-    for year in range(start_year, start_year + years):
-        for month in range(1, 13):
-            dates.append(datetime(year, month, 1))
-            # Fed funds rate simulation
-            if year < 2008:
-                rate = 4 + math.sin(year / 2) * 2
-            elif 2008 <= year <= 2015:
-                rate = 0.25
-            elif 2015 < year <= 2019:
-                rate = (year - 2015) * 0.5
-            elif 2020 <= year <= 2021:
-                rate = 0.25
-            else:
-                rate = min(5.5, (year - 2021) * 2)
-            values.append(max(0, rate + random.uniform(-0.1, 0.1)))
-    return dates, values
+def get_interest_rate_data():
+    """Get real Federal Funds rate data from FRED."""
+    return fetch_fed_funds(start="2000-01-01")
 
 
 class TestChartGeneration:
@@ -149,7 +74,7 @@ class TestChartGeneration:
 
     def test_single_subplot_chart(self, html_dir, screenshots_dir):
         """Test single subplot chart creation."""
-        dates, values = generate_gdp_data()
+        dates, values = get_gdp_data()
 
         chart = econcharts(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
@@ -182,9 +107,9 @@ class TestChartGeneration:
 
     def test_multi_subplot_chart(self, html_dir, screenshots_dir):
         """Test multi-subplot chart creation."""
-        gdp_dates, gdp_values = generate_gdp_data()
-        inf_dates, inf_values = generate_inflation_data()
-        unemp_dates, unemp_values = generate_unemployment_data()
+        gdp_dates, gdp_values = get_gdp_data()
+        inf_dates, inf_values = get_inflation_data()
+        unemp_dates, unemp_values = get_unemployment_data()
 
         chart = econcharts(
             num_rows=3,
@@ -226,7 +151,7 @@ class TestChartGeneration:
 
     def test_log_scale_chart(self, html_dir, screenshots_dir):
         """Test logarithmic scale chart."""
-        dates, values = generate_stock_data()
+        dates, values = get_stock_data()
         # Create exponential growth for log scale demo
         exp_values = [v * (1.1 ** (i/10)) for i, v in enumerate(values)]
 
@@ -254,7 +179,7 @@ class TestScaleAlignment:
 
     def test_scale_matches_data_range(self, html_dir, screenshots_dir):
         """Verify y-axis scale encompasses all data points."""
-        dates, values = generate_inflation_data()
+        dates, values = get_inflation_data()
         min_val, max_val = min(values), max(values)
 
         chart = econcharts(num_rows=1, height=400)
@@ -285,8 +210,8 @@ class TestScaleAlignment:
 
     def test_multiple_series_scale(self, html_dir, screenshots_dir):
         """Test scale with multiple series on same subplot."""
-        dates, gdp = generate_gdp_data()
-        _, rates = generate_interest_rate_data()
+        dates, gdp = get_gdp_data()
+        _, rates = get_interest_rate_data()
         # Trim to same length
         min_len = min(len(dates), len(rates))
         dates = dates[:min_len]
@@ -410,7 +335,7 @@ class TestZoomFunctionality:
 
     def test_drag_to_zoom(self, html_dir, screenshots_dir):
         """Test that dragging to select an area zooms the chart."""
-        dates, values = generate_gdp_data()
+        dates, values = get_gdp_data()
 
         chart = econcharts(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
@@ -474,7 +399,7 @@ class TestZoomFunctionality:
 
     def test_double_click_reset(self, html_dir, screenshots_dir):
         """Test that double-click resets zoom."""
-        dates, values = generate_inflation_data()
+        dates, values = get_inflation_data()
 
         chart = econcharts(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
@@ -545,7 +470,7 @@ class TestDOMStructure:
 
     def test_chart_elements_exist(self, html_dir, screenshots_dir):
         """Verify essential chart DOM elements exist."""
-        dates, values = generate_gdp_data()
+        dates, values = get_gdp_data()
 
         chart = econcharts(num_rows=2, subplot_titles=('Chart 1', 'Chart 2'), height=500)
         chart.add_line(row=1, x=dates, y=values, name='Series 1', color='teal')
@@ -590,7 +515,7 @@ class TestDOMStructure:
 
     def test_subplot_titles_rendered(self, html_dir, screenshots_dir):
         """Verify subplot titles are rendered in DOM."""
-        dates, values = generate_gdp_data()
+        dates, values = get_gdp_data()
 
         titles = ('GDP Growth', 'Inflation Rate', 'Unemployment')
         chart = econcharts(num_rows=3, subplot_titles=titles, height=700)
@@ -629,7 +554,7 @@ class TestColorTheme:
 
     def test_dark_theme_colors(self, html_dir, screenshots_dir):
         """Verify dark theme colors are applied."""
-        dates, values = generate_stock_data()
+        dates, values = get_stock_data()
 
         chart = econcharts(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Stock', color='gold')
@@ -662,7 +587,7 @@ class TestColorTheme:
 
     def test_custom_colors(self, html_dir, screenshots_dir):
         """Test custom color scheme."""
-        dates, values = generate_gdp_data()
+        dates, values = get_gdp_data()
 
         custom_colors = {
             'background': '#0f0f23',

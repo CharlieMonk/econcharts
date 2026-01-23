@@ -53,6 +53,7 @@ class EconChart:
         self,
         num_rows: int,
         row_heights: list[float] | None = None,
+        title: str | None = None,
         subplot_titles: tuple[str, ...] | None = None,
         colors: dict[str, str] | None = None,
         shared_xaxes: bool | None = None,
@@ -97,6 +98,7 @@ class EconChart:
 
         self.set_margins()
         self.set_legend()
+        self.set_title(title)
 
         # Apply theme layout
         self.fig.update_layout(
@@ -509,6 +511,7 @@ class EconChart:
         self,
         orientation: str | None = None,
         position: str | None = None,
+        xanchor: str | None = None
     ) -> EconChart:
         """
         Configure legend position and orientation.
@@ -520,13 +523,13 @@ class EconChart:
         Returns:
             Self for method chaining
         """
-        if orientation is None:
-            orientation = EconChart._defaults['legend']['orientation']
-        if position is None:
-            position = EconChart._defaults['legend']['position']
+        orientation = orientation or EconChart._defaults['legend']['orientation']
+        position = position or EconChart._defaults['legend']['position']
+        xanchor = xanchor or EconChart._defaults['legend']['xanchor']
 
         legend_kwargs: dict[str, Any] = {
             'orientation': orientation,
+            'xanchor': xanchor,
             'font': dict(size=EconChart._defaults['fonts']['legend'], color=self._colors['text']),
             'bgcolor': 'rgba(0,0,0,0)',
         }
@@ -558,10 +561,10 @@ class EconChart:
         """
         margins = EconChart._defaults['margins']
         self.fig.update_layout(margin=dict(
-            t=top if top is not None else margins['top'],
-            l=left if left is not None else margins['left'],
-            r=right if right is not None else margins['right'],
-            b=bottom if bottom is not None else margins['bottom'],
+            t=top or margins['top'],
+            l=left or margins['left'],
+            r=right or margins['right'],
+            b=bottom or margins['bottom'],
         ))
         return self
 

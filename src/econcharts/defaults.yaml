@@ -35,7 +35,7 @@ fonts:
 
 # Margins (pixels)
 margins:
-  top: 45
+  top: 55
   left: 55
   right: 55
   bottom: 35
@@ -59,19 +59,20 @@ recession:
 legend:
   orientation: "h"
   position: "bottom"
+  xanchor: "center"
 
 # Legend position configurations (Plotly layout parameters)
 legend_positions:
   top:
     yanchor: "bottom"
     y: 1.02
-    xanchor: "left"
-    x: 0
+    xanchor: "center"
+    x: 0.5
   bottom:
     yanchor: "top"
     y: -0.1
-    xanchor: "left"
-    x: 0
+    xanchor: "center"
+    x: 0.5
   right:
     yanchor: "top"
     y: 1

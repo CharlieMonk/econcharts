@@ -17,8 +17,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import requests
+
 # Cache directory for offline data
 CACHE_DIR = Path(__file__).parent / "data"
+
+# FRED public CSV endpoint (no API key required)
+FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
 
 # Common economic series with metadata
 SERIES_INFO = {
@@ -106,6 +111,73 @@ def _save_to_cache(series_id: str, dates: list, values: list) -> None:
         json.dump(data, f, indent=2)
 
 
+def _fetch_from_csv(
+    series_id: str,
+    start: str = "2000-01-01",
+    end: Optional[str] = None,
+) -> tuple[list, list]:
+    """Fetch data directly from FRED's public CSV endpoint.
+
+    This method doesn't require an API key and works as a reliable fallback
+    when pandas_datareader or fredapi are unavailable or broken.
+
+    Args:
+        series_id: FRED series identifier.
+        start: Start date in 'YYYY-MM-DD' format.
+        end: End date in 'YYYY-MM-DD' format (defaults to today).
+
+    Returns:
+        Tuple of (dates, values) where dates are datetime objects.
+
+    Raises:
+        RuntimeError: If the CSV download fails.
+    """
+    end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
+
+    params = {
+        "id": series_id,
+        "cosd": start,
+        "coed": end_dt,
+    }
+
+    try:
+        response = requests.get(FRED_CSV_URL, params=params, timeout=30)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"Failed to download CSV for {series_id}: {e}")
+
+    # Parse CSV content
+    lines = response.text.strip().split('\n')
+    if len(lines) < 2:
+        raise RuntimeError(f"No data returned for {series_id}")
+
+    dates = []
+    values = []
+
+    for line in lines[1:]:  # Skip header row
+        parts = line.split(',')
+        if len(parts) >= 2:
+            date_str = parts[0].strip()
+            value_str = parts[1].strip()
+
+            # Skip missing values (FRED uses '.' for missing data)
+            if value_str and value_str != '.':
+                try:
+                    # Parse date (YYYY-MM-DD format)
+                    dt = datetime.strptime(date_str, "%Y-%m-%d")
+                    val = float(value_str)
+                    dates.append(dt)
+                    values.append(val)
+                except (ValueError, TypeError):
+                    # Skip malformed rows
+                    pass
+
+    if not dates:
+        raise RuntimeError(f"No valid data points found for {series_id}")
+
+    return dates, values
+
+
 def fetch_fred(
     series_id: str,
     start: str = "2000-01-01",
@@ -146,41 +218,86 @@ def fetch_fred(
             if filtered:
                 return [d for d, _ in filtered], [v for _, v in filtered]
 
-    # Fetch from FRED using pandas_datareader
+    # Try multiple methods to fetch data from FRED
+    # Priority: 1) fredapi, 2) pandas_datareader, 3) CSV download, 4) cache
+    fetched = False
+    dates = None
+    values = None
+    last_error = None
+
+    # Method 1: Try fredapi (requires API key)
     try:
-        import pandas_datareader.data as web
+        from fredapi import Fred
+        import os
 
-        end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
-        df = web.DataReader(series_id, "fred", start, end_dt)
+        api_key = os.environ.get("FRED_API_KEY")
+        if api_key:
+            fred = Fred(api_key=api_key)
+            end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
+            series = fred.get_series(series_id, observation_start=start, observation_end=end_dt)
 
-        # Convert to lists
-        dates = df.index.to_pydatetime().tolist()
-        values = df[series_id].tolist()
+            dates = series.index.to_pydatetime().tolist()
+            values = series.tolist()
 
-        # Remove NaN values
-        filtered = [(d, v) for d, v in zip(dates, values) if v == v]  # NaN != NaN
-        dates = [d for d, _ in filtered]
-        values = [v for _, v in filtered]
+            # Remove NaN values
+            filtered = [(d, v) for d, v in zip(dates, values) if v == v]  # NaN != NaN
+            dates = [d for d, _ in filtered]
+            values = [v for _, v in filtered]
+            fetched = True
+    except Exception as e:
+        last_error = e
 
-        # Cache the data
+    # Method 2: Try pandas_datareader
+    if not fetched:
+        try:
+            import pandas_datareader.data as web
+
+            end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
+            df = web.DataReader(series_id, "fred", start, end_dt)
+
+            # Convert to lists
+            dates = df.index.to_pydatetime().tolist()
+            values = df[series_id].tolist()
+
+            # Remove NaN values
+            filtered = [(d, v) for d, v in zip(dates, values) if v == v]  # NaN != NaN
+            dates = [d for d, _ in filtered]
+            values = [v for _, v in filtered]
+            fetched = True
+        except Exception as e:
+            last_error = e
+
+    # Method 3: Try direct CSV download (no API key required)
+    if not fetched:
+        try:
+            dates, values = _fetch_from_csv(series_id, start, end)
+            fetched = True
+        except Exception as e:
+            last_error = e
+
+    # Success - cache and return the data
+    if fetched and dates and values:
         if use_cache:
             _save_to_cache(series_id, dates, values)
-
         return dates, values
 
-    except ImportError:
-        raise ImportError(
-            "pandas_datareader is required for FRED data. "
-            "Install with: pip install pandas-datareader"
-        )
-    except Exception as e:
-        # Try to fall back to cache
-        if use_cache:
-            cached = _load_from_cache(series_id)
-            if cached is not None:
-                print(f"Warning: Could not fetch {series_id}, using cached data: {e}")
-                return cached
-        raise RuntimeError(f"Failed to fetch {series_id} from FRED: {e}")
+    # Method 4: Final fallback to cache
+    if use_cache:
+        cached = _load_from_cache(series_id)
+        if cached is not None:
+            dates, values = cached
+            start_dt = datetime.fromisoformat(start)
+            end_dt = datetime.fromisoformat(end) if end else datetime.now()
+            filtered = [(d, v) for d, v in zip(dates, values)
+                       if start_dt <= d <= end_dt and v is not None]
+            if filtered:
+                print(f"Warning: Using cached data for {series_id}")
+                return [d for d, _ in filtered], [v for _, v in filtered]
+
+    # All methods failed
+    raise RuntimeError(
+        f"Failed to fetch {series_id} from FRED: {last_error}"
+    )
 
 
 def fetch_gdp(start: str = "2000-01-01", end: Optional[str] = None) -> tuple[list, list]:

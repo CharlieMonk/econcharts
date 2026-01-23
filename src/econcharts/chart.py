@@ -120,22 +120,17 @@ class EconChart:
             self.fig.update_xaxes(gridcolor=self._colors['grid'], row=row, col=1)
             self.fig.update_yaxes(gridcolor=self._colors['grid'], row=row, col=1)
 
-    @property
-    def colors(self) -> dict[str, str]:
-        """Theme colors dictionary."""
-        return self._colors
-
     @staticmethod
     def resolve_color(color: str) -> str:
         """
         Resolve a color name to its hex value.
 
         Args:
-            color: Either a hex color string (e.g., '#ff0000') or a named color
+            color: Either a hex/rgb color string or a named color
                    from the palette (e.g., 'teal', 'coral')
 
         Returns:
-            Hex color string
+            Hex or rgb color string
 
         Examples:
             >>> EconChart.resolve_color('teal')
@@ -397,7 +392,7 @@ class EconChart:
 
     def configure_recession_shading(
         self,
-        row: int | str = 'all',
+        row: int | str | list[int] = 'all',
         recessions: Sequence[tuple[datetime, datetime]] | None = None,
         color: str | None = None,
         opacity: float | None = None,
@@ -409,7 +404,8 @@ class EconChart:
         the appearance or specify custom recession periods.
 
         Args:
-            row: Row number (1-indexed) or 'all' to apply to all rows.
+            row: Row number (1-indexed), 'all' to apply to all rows, or a list
+                of row numbers to apply to specific rows (e.g., [1, 3]).
             recessions: Custom list of (start, end) datetime tuples defining
                 recession periods. If None, uses NBER recession dates.
             color: Fill color for recession shading. Defaults to gray.
@@ -473,18 +469,21 @@ class EconChart:
         # Add recession shading using add_vrect with row parameter
         # exclude_empty_subplots=False ensures shapes are added even after
         # traces are moved to the bottom axis by unified spikeline
+        # Plotly's add_vrect doesn't accept a list, so we iterate when needed
+        rows_to_shade = row if isinstance(row, list) else [row]
         for rec_start, rec_end in recession_periods:
-            self.fig.add_vrect(
-                x0=rec_start,
-                x1=rec_end,
-                fillcolor=fill_color,
-                opacity=fill_opacity,
-                layer='below',
-                line_width=0,
-                row=row,
-                col=1,
-                exclude_empty_subplots=False,
-            )
+            for r in rows_to_shade:
+                self.fig.add_vrect(
+                    x0=rec_start,
+                    x1=rec_end,
+                    fillcolor=fill_color,
+                    opacity=fill_opacity,
+                    layer='below',
+                    line_width=0,
+                    row=r,
+                    col=1,
+                    exclude_empty_subplots=False,
+                )
 
     def enable_unified_spikeline(self, spike_color: str | None = None) -> EconChart:
         """

@@ -18,17 +18,12 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright, Page, expect
 
-# Add src to path for local testing
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "econcharts"))
-
-import econcharts
-from fred import (
+from econcharts import EconChart
+from econcharts.fred import (
     fetch_gdp, fetch_inflation, fetch_unemployment,
     fetch_fed_funds, fetch_sp500, fetch_treasury_10y
 )
-from recessions import NBER_RECESSIONS, get_recessions_in_range
+from econcharts.recessions import NBER_RECESSIONS, get_recessions_in_range
 
 
 def wait_for_plotly_ready(page, timeout=30000):
@@ -81,7 +76,7 @@ class TestChartGeneration:
         """Test single subplot chart creation."""
         dates, values = get_gdp_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
         chart.set_title('GDP Growth Rate')
         chart.set_yaxis(row=1, title='% Change YoY')
@@ -116,7 +111,7 @@ class TestChartGeneration:
         inf_dates, inf_values = get_inflation_data()
         unemp_dates, unemp_values = get_unemployment_data()
 
-        chart = econcharts(
+        chart = EconChart(
             num_rows=3,
             subplot_titles=('GDP Growth', 'Inflation', 'Unemployment'),
             height=700,
@@ -160,7 +155,7 @@ class TestChartGeneration:
         # Create exponential growth for log scale demo
         exp_values = [v * (1.1 ** (i/10)) for i, v in enumerate(values)]
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=exp_values, name='Stock Price', color='gold')
         chart.set_yaxis(row=1, title='Price ($)', scale_type='log')
         chart.set_title('Stock Price (Log Scale)')
@@ -187,7 +182,7 @@ class TestScaleAlignment:
         dates, values = get_inflation_data()
         min_val, max_val = min(values), max(values)
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
         chart.set_title('Inflation Rate')
 
@@ -223,7 +218,7 @@ class TestScaleAlignment:
         gdp = gdp[:min_len]
         rates = rates[:min_len]
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=gdp, name='GDP Growth', color='teal')
         chart.add_line(row=1, x=dates, y=rates, name='Interest Rate', color='coral')
         chart.set_title('GDP vs Interest Rates')
@@ -261,7 +256,7 @@ class TestHoverTooltips:
         dates = [datetime(2020, 1, 1) + timedelta(days=i*30) for i in range(12)]
         values = [10.0, 20.0, 30.0, 25.0, 35.0, 45.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0]
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Test Data', color='teal')
         chart.set_title('Hover Test')
         chart.enable_unified_spikeline()
@@ -309,7 +304,7 @@ class TestHoverTooltips:
         dates = [datetime(2020, 1, 1) + timedelta(days=i*30) for i in range(12)]
         values = [100.5, 200.25, 150.75, 175.0, 225.5, 250.0, 275.25, 300.0, 325.5, 350.75, 375.0, 400.25]
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Accurate Data', color='sky')
 
         html_path = html_dir / "hover_accuracy.html"
@@ -342,7 +337,7 @@ class TestZoomFunctionality:
         """Test that dragging to select an area zooms the chart."""
         dates, values = get_gdp_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         chart.set_title('Zoom Test')
 
@@ -406,7 +401,7 @@ class TestZoomFunctionality:
         """Test that double-click resets zoom."""
         dates, values = get_inflation_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
 
         html_path = html_dir / "zoom_reset_test.html"
@@ -477,7 +472,7 @@ class TestDOMStructure:
         """Verify essential chart DOM elements exist."""
         dates, values = get_gdp_data()
 
-        chart = econcharts(num_rows=2, subplot_titles=('Chart 1', 'Chart 2'), height=500)
+        chart = EconChart(num_rows=2, subplot_titles=('Chart 1', 'Chart 2'), height=500)
         chart.add_line(row=1, x=dates, y=values, name='Series 1', color='teal')
         chart.add_line(row=2, x=dates, y=[v * 0.5 for v in values], name='Series 2', color='coral')
         chart.set_title('DOM Test Chart')
@@ -523,7 +518,7 @@ class TestDOMStructure:
         dates, values = get_gdp_data()
 
         titles = ('GDP Growth', 'Inflation Rate', 'Unemployment')
-        chart = econcharts(num_rows=3, subplot_titles=titles, height=700)
+        chart = EconChart(num_rows=3, subplot_titles=titles, height=700)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         chart.add_line(row=2, x=dates, y=[v * 0.3 for v in values], name='Inflation', color='coral')
         chart.add_line(row=3, x=dates, y=[abs(v) * 0.2 for v in values], name='Unemployment', color='sky')
@@ -561,7 +556,7 @@ class TestColorTheme:
         """Verify dark theme colors are applied."""
         dates, values = get_stock_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Stock', color='gold')
         chart.set_title('Dark Theme Test')
 
@@ -603,7 +598,7 @@ class TestColorTheme:
             'zero_line': 'rgba(200, 200, 255, 0.3)',
         }
 
-        chart = econcharts(num_rows=1, height=400, colors=custom_colors)
+        chart = EconChart(num_rows=1, height=400, colors=custom_colors)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='#88ff88')
         chart.set_title('Custom Colors')
 
@@ -638,7 +633,7 @@ class TestRecessionShading:
         """Test that recession shading is applied by default."""
         dates, values = get_unemployment_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
         # Recession shading is now enabled by default - no need to call add_recession_shading()
         chart.set_title('Unemployment with Recession Shading')
@@ -669,7 +664,7 @@ class TestRecessionShading:
         """Test that recession shading aligns with the time axis."""
         dates, values = get_gdp_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         # Recession shading is enabled by default
         chart.set_title('GDP with Recession Shading')
@@ -709,7 +704,7 @@ class TestRecessionShading:
         """Test that recession shading adjusts when zooming."""
         dates, values = get_unemployment_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
         # Recession shading is enabled by default
         chart.set_title('Recession Shading Zoom Test')
@@ -782,7 +777,7 @@ class TestRecessionShading:
         unemp_dates, unemp_values = get_unemployment_data()
         inf_dates, inf_values = get_inflation_data()
 
-        chart = econcharts(
+        chart = EconChart(
             num_rows=3,
             subplot_titles=('GDP Growth', 'Unemployment', 'Inflation'),
             height=700,
@@ -823,7 +818,7 @@ class TestRecessionShading:
         gdp_dates, gdp_values = get_gdp_data()
         unemp_dates, unemp_values = get_unemployment_data()
 
-        chart = econcharts(
+        chart = EconChart(
             num_rows=2,
             subplot_titles=('GDP Growth', 'Unemployment'),
             height=500,
@@ -870,7 +865,7 @@ class TestRecessionShading:
             (datetime(2020, 2, 1), datetime(2020, 4, 1)),   # COVID
         ]
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         chart.configure_recession_shading(recessions=custom_recessions)
         chart.set_title('GDP with Custom Recession Periods')
@@ -899,7 +894,7 @@ class TestRecessionShading:
         """Test custom recession shading color and opacity."""
         dates, values = get_unemployment_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
         chart.configure_recession_shading(color='red', opacity=0.25)
         chart.set_title('Unemployment with Custom Recession Color')
@@ -935,7 +930,7 @@ class TestRecessionShading:
         """Test that recession shading can be disabled."""
         dates, values = get_gdp_data()
 
-        chart = econcharts(num_rows=1, height=400)
+        chart = EconChart(num_rows=1, height=400)
         chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
         chart.disable_recession_shading()  # Disable the default recession shading
         chart.set_title('GDP without Recession Shading')

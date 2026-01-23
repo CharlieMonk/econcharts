@@ -109,6 +109,9 @@ class EconChart:
             ),
         )
 
+        # Set default margins
+        self.set_margins()
+
         # Style subplot titles
         if subplot_titles:
             title_font = dict(size=EconChart._defaults['fonts']['subplot_title'], color=self._colors['text'])

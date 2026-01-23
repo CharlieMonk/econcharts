@@ -55,18 +55,23 @@ recession:
   color: "gray"
   opacity: 0.15
 
-# Legend position presets
+# Legend position defaults
+legend:
+  orientation: "h"
+  position: "bottom"
+
+# Legend position configurations (Plotly layout parameters)
 legend_positions:
   top:
     yanchor: "bottom"
-    y: 1.01
-    xanchor: "center"
-    x: 0.5
+    y: 1.02
+    xanchor: "left"
+    x: 0
   bottom:
     yanchor: "top"
     y: -0.1
-    xanchor: "center"
-    x: 0.5
+    xanchor: "left"
+    x: 0
   right:
     yanchor: "top"
     y: 1

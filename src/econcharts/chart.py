@@ -95,6 +95,9 @@ class EconChart:
             subplot_titles=subplot_titles,
         )
 
+        self.set_margins()
+        self.set_legend()
+
         # Apply theme layout
         self.fig.update_layout(
             height=self.height,
@@ -109,8 +112,7 @@ class EconChart:
             ),
         )
 
-        # Set default margins
-        self.set_margins()
+
 
         # Style subplot titles
         if subplot_titles:
@@ -505,8 +507,8 @@ class EconChart:
 
     def set_legend(
         self,
-        orientation: str = 'h',
-        position: str = 'top',
+        orientation: str | None = None,
+        position: str | None = None,
     ) -> EconChart:
         """
         Configure legend position and orientation.
@@ -518,6 +520,11 @@ class EconChart:
         Returns:
             Self for method chaining
         """
+        if orientation is None:
+            orientation = EconChart._defaults['legend']['orientation']
+        if position is None:
+            position = EconChart._defaults['legend']['position']
+
         legend_kwargs: dict[str, Any] = {
             'orientation': orientation,
             'font': dict(size=EconChart._defaults['fonts']['legend'], color=self._colors['text']),

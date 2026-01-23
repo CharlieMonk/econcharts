@@ -681,6 +681,12 @@ class EconChart:
                     yaxis=f'y{axis_suffix}',
                 ))
 
+            # Explicitly constrain the bottom x-axis range to the data range.
+            # This prevents Plotly's autorange from adding excessive padding when
+            # multiple traces with different point densities share the same axis.
+            # The range is set on all x-axes (will propagate via matches).
+            self.fig.update_xaxes(range=x_range_list)
+
         # Sync upper x-axes to bottom x-axis
         for row in range(1, self.num_rows):
             self.fig.update_xaxes(row=row, col=1, matches=bottom_xaxis)

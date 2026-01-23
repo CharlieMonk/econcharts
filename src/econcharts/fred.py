@@ -118,9 +118,6 @@ def _fetch_from_csv(
 ) -> tuple[list, list]:
     """Fetch data directly from FRED's public CSV endpoint.
 
-    This method doesn't require an API key and works as a reliable fallback
-    when pandas_datareader or fredapi are unavailable or broken.
-
     Args:
         series_id: FRED series identifier.
         start: Start date in 'YYYY-MM-DD' format.
@@ -218,86 +215,26 @@ def fetch_fred(
             if filtered:
                 return [d for d, _ in filtered], [v for _, v in filtered]
 
-    # Try multiple methods to fetch data from FRED
-    # Priority: 1) fredapi, 2) pandas_datareader, 3) CSV download, 4) cache
-    fetched = False
-    dates = None
-    values = None
-    last_error = None
-
-    # Method 1: Try fredapi (requires API key)
+    # Fetch from FRED's public CSV endpoint
     try:
-        from fredapi import Fred
-        import os
-
-        api_key = os.environ.get("FRED_API_KEY")
-        if api_key:
-            fred = Fred(api_key=api_key)
-            end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
-            series = fred.get_series(series_id, observation_start=start, observation_end=end_dt)
-
-            dates = series.index.to_pydatetime().tolist()
-            values = series.tolist()
-
-            # Remove NaN values
-            filtered = [(d, v) for d, v in zip(dates, values) if v == v]  # NaN != NaN
-            dates = [d for d, _ in filtered]
-            values = [v for _, v in filtered]
-            fetched = True
-    except Exception as e:
-        last_error = e
-
-    # Method 2: Try pandas_datareader
-    if not fetched:
-        try:
-            import pandas_datareader.data as web
-
-            end_dt = end if end else datetime.now().strftime("%Y-%m-%d")
-            df = web.DataReader(series_id, "fred", start, end_dt)
-
-            # Convert to lists
-            dates = df.index.to_pydatetime().tolist()
-            values = df[series_id].tolist()
-
-            # Remove NaN values
-            filtered = [(d, v) for d, v in zip(dates, values) if v == v]  # NaN != NaN
-            dates = [d for d, _ in filtered]
-            values = [v for _, v in filtered]
-            fetched = True
-        except Exception as e:
-            last_error = e
-
-    # Method 3: Try direct CSV download (no API key required)
-    if not fetched:
-        try:
-            dates, values = _fetch_from_csv(series_id, start, end)
-            fetched = True
-        except Exception as e:
-            last_error = e
-
-    # Success - cache and return the data
-    if fetched and dates and values:
+        dates, values = _fetch_from_csv(series_id, start, end)
         if use_cache:
             _save_to_cache(series_id, dates, values)
         return dates, values
-
-    # Method 4: Final fallback to cache
-    if use_cache:
-        cached = _load_from_cache(series_id)
-        if cached is not None:
-            dates, values = cached
-            start_dt = datetime.fromisoformat(start)
-            end_dt = datetime.fromisoformat(end) if end else datetime.now()
-            filtered = [(d, v) for d, v in zip(dates, values)
-                       if start_dt <= d <= end_dt and v is not None]
-            if filtered:
-                print(f"Warning: Using cached data for {series_id}")
-                return [d for d, _ in filtered], [v for _, v in filtered]
-
-    # All methods failed
-    raise RuntimeError(
-        f"Failed to fetch {series_id} from FRED: {last_error}"
-    )
+    except Exception as e:
+        # Fall back to cache if available
+        if use_cache:
+            cached = _load_from_cache(series_id)
+            if cached is not None:
+                dates, values = cached
+                start_dt = datetime.fromisoformat(start)
+                end_dt = datetime.fromisoformat(end) if end else datetime.now()
+                filtered = [(d, v) for d, v in zip(dates, values)
+                           if start_dt <= d <= end_dt and v is not None]
+                if filtered:
+                    print(f"Warning: Using cached data for {series_id}")
+                    return [d for d, _ in filtered], [v for _, v in filtered]
+        raise RuntimeError(f"Failed to fetch {series_id} from FRED: {e}")
 
 
 def fetch_gdp(start: str = "2000-01-01", end: Optional[str] = None) -> tuple[list, list]:

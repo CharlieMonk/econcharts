@@ -48,13 +48,6 @@ class EconChart:
     _defaults = _load_yaml('defaults.yaml')
     palette = _load_yaml('colors.yaml')
 
-    # Default theme colors
-    _text_color = _defaults['colors']['text']
-    _grid_color = _defaults['colors']['grid']
-    _paper_color = _defaults['colors']['paper']
-    _bg_color = _defaults['colors']['background']
-    _zero_line_color = _defaults['colors']['zero_line']
-    _spike_color = _defaults['colors']['spike']
 
     def __init__(
         self,
@@ -85,17 +78,8 @@ class EconChart:
         self._recession_config: dict[str, Any] = {}
         self._x_range: tuple | None = None
 
-        # Override default colors if custom colors provided
-        if colors:
-            self._colors = colors
-            self._text_color = colors.get('text', self._defaults['colors']['text'])
-            self._grid_color = colors.get('grid', self._defaults['colors']['grid'])
-            self._paper_color = colors.get('paper', self._defaults['colors']['paper'])
-            self._bg_color = colors.get('background', self._defaults['colors']['background'])
-            self._zero_line_color = colors.get('zero_line', self._defaults['colors']['zero_line'])
-            self._spike_color = colors.get('spike', self._defaults['colors']['spike'])
-        else:
-            self._colors = self._defaults['colors'].copy()
+        # Merge custom colors with defaults
+        self._colors = {**self._defaults['colors'], **(colors or {})}
 
         # Apply defaults
         shared_xaxes = shared_xaxes if shared_xaxes is not None else self._defaults['chart']['shared_xaxes']
@@ -115,26 +99,26 @@ class EconChart:
         self.fig.update_layout(
             height=self.height,
             hovermode='x unified',
-            paper_bgcolor=self._paper_color,
-            plot_bgcolor=self._bg_color,
-            font=dict(color=self._text_color, size=self._defaults['fonts']['main']),
+            paper_bgcolor=self._colors['paper'],
+            plot_bgcolor=self._colors['background'],
+            font=dict(color=self._colors['text'], size=self._defaults['fonts']['main']),
             hoverlabel=dict(
-                bgcolor=self._paper_color,
+                bgcolor=self._colors['paper'],
                 font_size=self._defaults['fonts']['hoverlabel'],
-                font_color=self._text_color,
+                font_color=self._colors['text'],
             ),
         )
 
         # Style subplot titles
         if subplot_titles:
-            title_font = dict(size=self._defaults['fonts']['subplot_title'], color=self._text_color)
+            title_font = dict(size=self._defaults['fonts']['subplot_title'], color=self._colors['text'])
             for annotation in self.fig['layout']['annotations']:
                 annotation['font'] = title_font
 
         # Apply default grid color to all axes
         for row in range(1, num_rows + 1):
-            self.fig.update_xaxes(gridcolor=self._grid_color, row=row, col=1)
-            self.fig.update_yaxes(gridcolor=self._grid_color, row=row, col=1)
+            self.fig.update_xaxes(gridcolor=self._colors['grid'], row=row, col=1)
+            self.fig.update_yaxes(gridcolor=self._colors['grid'], row=row, col=1)
 
     @property
     def colors(self) -> dict[str, str]:
@@ -307,7 +291,7 @@ class EconChart:
             update_kwargs['title_text'] = title
             update_kwargs['title_font'] = dict(
                 size=self._defaults['fonts']['axis_title'],
-                color=title_color or self._text_color,
+                color=title_color or self._colors['text'],
             )
 
         if gridcolor:
@@ -345,7 +329,7 @@ class EconChart:
             update_kwargs['title_text'] = title
             update_kwargs['title_font'] = dict(
                 size=self._defaults['fonts']['axis_title'],
-                color=self._text_color,
+                color=self._colors['text'],
             )
 
         if tick_format:
@@ -385,7 +369,7 @@ class EconChart:
         self.fig.add_hline(
             y=y,
             line_dash=dash or self._defaults['hline']['dash'],
-            line_color=color or self._zero_line_color,
+            line_color=color or self._colors['zero_line'],
             line_width=width or self._defaults['hline']['width'],
             row=row,
             col=1,
@@ -514,7 +498,7 @@ class EconChart:
         """
         self._spike_enabled = True
         if spike_color:
-            self._spike_color = spike_color
+            self._colors['spike'] = spike_color
         return self
 
     def set_legend(
@@ -534,7 +518,7 @@ class EconChart:
         """
         legend_kwargs: dict[str, Any] = {
             'orientation': orientation,
-            'font': dict(size=self._defaults['fonts']['legend'], color=self._text_color),
+            'font': dict(size=self._defaults['fonts']['legend'], color=self._colors['text']),
             'bgcolor': 'rgba(0,0,0,0)',
         }
 
@@ -586,7 +570,7 @@ class EconChart:
         self.fig.update_layout(
             title=dict(
                 text=text,
-                font=dict(size=font_size or self._defaults['fonts']['chart_title'], color=self._text_color),
+                font=dict(size=font_size or self._defaults['fonts']['chart_title'], color=self._colors['text']),
                 y=0.99,
                 yanchor='top',
             )
@@ -696,7 +680,7 @@ class EconChart:
             showspikes=True,
             spikemode='across',
             spikesnap='cursor',
-            spikecolor=self._spike_color,
+            spikecolor=self._colors['spike'],
             spikethickness=self._defaults['spike']['thickness'],
             spikedash=self._defaults['spike']['dash'],
         )

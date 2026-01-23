@@ -72,18 +72,18 @@ class EconChart:
             height: Chart height in pixels
         """
         self.num_rows = num_rows
-        self.height = height or self._defaults['chart']['height']
+        self.height = height or EconChart._defaults['chart']['height']
         self._spike_enabled = False
         self._recession_enabled = True
         self._recession_config: dict[str, Any] = {}
         self._x_range: tuple | None = None
 
         # Merge custom colors with defaults
-        self._colors = {**self._defaults['colors'], **(colors or {})}
+        self._colors = {**EconChart._defaults['colors'], **(colors or {})}
 
         # Apply defaults
-        shared_xaxes = shared_xaxes if shared_xaxes is not None else self._defaults['chart']['shared_xaxes']
-        vertical_spacing = vertical_spacing if vertical_spacing is not None else self._defaults['chart']['vertical_spacing']
+        shared_xaxes = shared_xaxes if shared_xaxes is not None else EconChart._defaults['chart']['shared_xaxes']
+        vertical_spacing = vertical_spacing if vertical_spacing is not None else EconChart._defaults['chart']['vertical_spacing']
         row_heights = row_heights or [1.0 / num_rows] * num_rows
 
         self.fig = make_subplots(
@@ -101,17 +101,17 @@ class EconChart:
             hovermode='x unified',
             paper_bgcolor=self._colors['paper'],
             plot_bgcolor=self._colors['background'],
-            font=dict(color=self._colors['text'], size=self._defaults['fonts']['main']),
+            font=dict(color=self._colors['text'], size=EconChart._defaults['fonts']['main']),
             hoverlabel=dict(
                 bgcolor=self._colors['paper'],
-                font_size=self._defaults['fonts']['hoverlabel'],
+                font_size=EconChart._defaults['fonts']['hoverlabel'],
                 font_color=self._colors['text'],
             ),
         )
 
         # Style subplot titles
         if subplot_titles:
-            title_font = dict(size=self._defaults['fonts']['subplot_title'], color=self._colors['text'])
+            title_font = dict(size=EconChart._defaults['fonts']['subplot_title'], color=self._colors['text'])
             for annotation in self.fig['layout']['annotations']:
                 annotation['font'] = title_font
 
@@ -196,7 +196,7 @@ class EconChart:
         """
         line_dict: dict[str, Any] = {
             'color': self.resolve_color(color),
-            'width': width or self._defaults['line']['width'],
+            'width': width or EconChart._defaults['line']['width'],
         }
         if dash:
             line_dict['dash'] = dash
@@ -250,7 +250,7 @@ class EconChart:
             name=name,
             trace_kwargs={
                 'mode': 'markers',
-                'marker': dict(color=self.resolve_color(color), size=marker_size or self._defaults['scatter']['marker_size']),
+                'marker': dict(color=self.resolve_color(color), size=marker_size or EconChart._defaults['scatter']['marker_size']),
                 'visible': visible,
                 'showlegend': showlegend,
             },
@@ -285,7 +285,7 @@ class EconChart:
         if title:
             update_kwargs['title_text'] = title
             update_kwargs['title_font'] = dict(
-                size=self._defaults['fonts']['axis_title'],
+                size=EconChart._defaults['fonts']['axis_title'],
                 color=title_color or self._colors['text'],
             )
 
@@ -323,7 +323,7 @@ class EconChart:
         if title:
             update_kwargs['title_text'] = title
             update_kwargs['title_font'] = dict(
-                size=self._defaults['fonts']['axis_title'],
+                size=EconChart._defaults['fonts']['axis_title'],
                 color=self._colors['text'],
             )
 
@@ -363,9 +363,9 @@ class EconChart:
         """
         self.fig.add_hline(
             y=y,
-            line_dash=dash or self._defaults['hline']['dash'],
+            line_dash=dash or EconChart._defaults['hline']['dash'],
             line_color=color or self._colors['zero_line'],
-            line_width=width or self._defaults['hline']['width'],
+            line_width=width or EconChart._defaults['hline']['width'],
             row=row,
             col=1,
         )
@@ -441,7 +441,7 @@ class EconChart:
         opacity = config.get('opacity')
 
         # Get recession defaults
-        recession_defaults = self._defaults.get('recession', {})
+        recession_defaults = EconChart._defaults.get('recession', {})
         fill_color = color or recession_defaults.get('color', 'gray')
         fill_opacity = opacity if opacity is not None else recession_defaults.get('opacity', 0.15)
 
@@ -517,12 +517,12 @@ class EconChart:
         """
         legend_kwargs: dict[str, Any] = {
             'orientation': orientation,
-            'font': dict(size=self._defaults['fonts']['legend'], color=self._colors['text']),
+            'font': dict(size=EconChart._defaults['fonts']['legend'], color=self._colors['text']),
             'bgcolor': 'rgba(0,0,0,0)',
         }
 
-        if position in self._defaults['legend_positions']:
-            legend_kwargs.update(self._defaults['legend_positions'][position])
+        if position in EconChart._defaults['legend_positions']:
+            legend_kwargs.update(EconChart._defaults['legend_positions'][position])
 
         self.fig.update_layout(legend=legend_kwargs)
         return self
@@ -546,7 +546,7 @@ class EconChart:
         Returns:
             Self for method chaining
         """
-        margins = self._defaults['margins']
+        margins = EconChart._defaults['margins']
         self.fig.update_layout(margin=dict(
             t=top if top is not None else margins['top'],
             l=left if left is not None else margins['left'],
@@ -569,7 +569,7 @@ class EconChart:
         self.fig.update_layout(
             title=dict(
                 text=text,
-                font=dict(size=font_size or self._defaults['fonts']['chart_title'], color=self._colors['text']),
+                font=dict(size=font_size or EconChart._defaults['fonts']['chart_title'], color=self._colors['text']),
                 y=0.99,
                 yanchor='top',
             )
@@ -680,8 +680,8 @@ class EconChart:
             spikemode='across',
             spikesnap='cursor',
             spikecolor=self._colors['spike'],
-            spikethickness=self._defaults['spike']['thickness'],
-            spikedash=self._defaults['spike']['dash'],
+            spikethickness=EconChart._defaults['spike']['thickness'],
+            spikedash=EconChart._defaults['spike']['dash'],
         )
 
 

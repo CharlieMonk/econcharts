@@ -95,7 +95,7 @@ class EconChart:
             subplot_titles=subplot_titles,
         )
 
-        # Apply default dark theme layout
+        # Apply theme layout
         self.fig.update_layout(
             height=self.height,
             hovermode='x unified',
@@ -115,7 +115,7 @@ class EconChart:
             for annotation in self.fig['layout']['annotations']:
                 annotation['font'] = title_font
 
-        # Apply default grid color to all axes
+        # Apply grid color to all axes
         for row in range(1, num_rows + 1):
             self.fig.update_xaxes(gridcolor=self._colors['grid'], row=row, col=1)
             self.fig.update_yaxes(gridcolor=self._colors['grid'], row=row, col=1)
@@ -392,7 +392,7 @@ class EconChart:
 
     def configure_recession_shading(
         self,
-        row: int | str | list[int] = 'all',
+        rows: str | list[int] = 'all',
         recessions: Sequence[tuple[datetime, datetime]] | None = None,
         color: str | None = None,
         opacity: float | None = None,
@@ -404,7 +404,7 @@ class EconChart:
         the appearance or specify custom recession periods.
 
         Args:
-            row: Row number (1-indexed), 'all' to apply to all rows, or a list
+            rows: 'all' to apply to all rows, or a list
                 of row numbers to apply to specific rows (e.g., [1, 3]).
             recessions: Custom list of (start, end) datetime tuples defining
                 recession periods. If None, uses NBER recession dates.
@@ -424,7 +424,7 @@ class EconChart:
             chart.configure_recession_shading(recessions=custom, color='red', opacity=0.2)
         """
         self._recession_config = {
-            'row': row,
+            'row': rows,
             'recessions': recessions,
             'color': color,
             'opacity': opacity,
@@ -435,21 +435,21 @@ class EconChart:
         """Apply recession shading to the chart."""
         # Get config or defaults
         config = self._recession_config
-        row = config.get('row', 'all')
+        row = config.get('row')
         recessions = config.get('recessions')
         color = config.get('color')
         opacity = config.get('opacity')
 
         # Get recession defaults
         recession_defaults = EconChart._defaults.get('recession', {})
-        fill_color = color or recession_defaults.get('color', 'gray')
-        fill_opacity = opacity if opacity is not None else recession_defaults.get('opacity', 0.15)
+        fill_color = color or recession_defaults.get('color')
+        fill_opacity = opacity or recession_defaults.get('opacity')
 
         # Resolve named color
         fill_color = self.resolve_color(fill_color)
 
         # Use NBER recessions if not specified
-        recession_periods = recessions if recessions is not None else NBER_RECESSIONS
+        recession_periods = recessions or NBER_RECESSIONS
 
         # Filter recessions to the current x-axis range if available
         if self._x_range is not None:
@@ -470,7 +470,7 @@ class EconChart:
         # exclude_empty_subplots=False ensures shapes are added even after
         # traces are moved to the bottom axis by unified spikeline
         # Plotly's add_vrect doesn't accept a list, so we iterate when needed
-        rows_to_shade = row if isinstance(row, list) else [row]
+        rows_to_shade = row if isinstance(row, list) else range(1, self.num_rows+1)
         for rec_start, rec_end in recession_periods:
             for r in rows_to_shade:
                 self.fig.add_vrect(

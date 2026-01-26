@@ -8,6 +8,7 @@ colors:
   grid: "#2a2a4a"
   text: "#e8e8e8"
   spike: "rgba(255, 255, 255, 0.5)"
+  crosshair: "rgba(255, 255, 255, 0.5)"
   zero_line: "rgba(255, 255, 255, 0.3)"
 
 # Chart dimensions
@@ -40,8 +41,13 @@ margins:
   right: 55
   bottom: 35
 
-# Spike line settings
+# Spike line settings (legacy)
 spike:
+  thickness: 1
+  dash: "dot"
+
+# Crosshair settings (used by EconBoard.crosshair)
+crosshair:
   thickness: 1
   dash: "dot"
 

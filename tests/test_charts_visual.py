@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright, Page, expect
 
-from econcharts import EconChart
+from econcharts import EconBoard, EconChart, Data
 from econcharts.fred import (
     fetch_gdp, fetch_inflation, fetch_unemployment,
     fetch_fed_funds, fetch_sp500, fetch_treasury_10y
@@ -76,15 +76,16 @@ class TestChartGeneration:
         """Test single subplot chart creation."""
         dates, values = get_gdp_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
-        chart.set_title('GDP Growth Rate')
-        chart.set_yaxis(row=1, title='% Change YoY')
-        chart.add_hline(row=1, y=0)
-        chart.enable_unified_spikeline()
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP Growth', color='teal'),
+            title='GDP Growth Rate',
+            y_label='% Change YoY',
+            horizontal_line=0,
+        )
+        board = EconBoard(chart, crosshair=True)
 
         html_path = html_dir / "single_subplot.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -111,28 +112,33 @@ class TestChartGeneration:
         inf_dates, inf_values = get_inflation_data()
         unemp_dates, unemp_values = get_unemployment_data()
 
-        chart = EconChart(
-            num_rows=3,
-            subplot_titles=('GDP Growth', 'Inflation', 'Unemployment'),
-            height=700,
+        gdp_chart = EconChart(
+            Data(x=gdp_dates, y=gdp_values, name='GDP', color='teal'),
+            title='GDP Growth',
+            y_label='% YoY',
+        )
+        inflation_chart = EconChart(
+            Data(x=inf_dates, y=inf_values, name='CPI', color='coral'),
+            title='Inflation',
+            y_label='% YoY',
+        )
+        unemployment_chart = EconChart(
+            Data(x=unemp_dates, y=unemp_values, name='Unemployment', color='sky'),
+            title='Unemployment',
+            y_label='% Rate',
         )
 
-        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
-        chart.add_line(row=2, x=inf_dates, y=inf_values, name='CPI', color='coral')
-        chart.add_line(row=3, x=unemp_dates, y=unemp_values, name='Unemployment', color='sky')
-
-        chart.set_yaxis(row=1, title='% YoY')
-        chart.set_yaxis(row=2, title='% YoY')
-        chart.set_yaxis(row=3, title='% Rate')
-
-        chart.add_hline(row=1, y=0)
-        chart.add_hline(row=2, y=2.0)  # Inflation target
-
-        chart.set_legend(orientation='h', position='top')
-        chart.enable_unified_spikeline()
+        board = EconBoard(
+            gdp_chart,
+            inflation_chart,
+            unemployment_chart,
+            height=700,
+            legend='top',
+            crosshair=True,
+        )
 
         html_path = html_dir / "multi_subplot.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -155,14 +161,16 @@ class TestChartGeneration:
         # Create exponential growth for log scale demo
         exp_values = [v * (1.1 ** (i/10)) for i, v in enumerate(values)]
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=exp_values, name='Stock Price', color='gold')
-        chart.set_yaxis(row=1, title='Price ($)', scale_type='log')
-        chart.set_title('Stock Price (Log Scale)')
-        chart.enable_unified_spikeline()
+        chart = EconChart(
+            Data(x=dates, y=exp_values, name='Stock Price', color='gold'),
+            title='Stock Price (Log Scale)',
+            y_label='Price ($)',
+            y_scale='log',
+        )
+        board = EconBoard(chart, height=400, crosshair=True)
 
         html_path = html_dir / "log_scale.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -182,12 +190,14 @@ class TestScaleAlignment:
         dates, values = get_inflation_data()
         min_val, max_val = min(values), max(values)
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
-        chart.set_title('Inflation Rate')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Inflation', color='coral'),
+            title='Inflation Rate',
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "scale_test.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -218,13 +228,15 @@ class TestScaleAlignment:
         gdp = gdp[:min_len]
         rates = rates[:min_len]
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=gdp, name='GDP Growth', color='teal')
-        chart.add_line(row=1, x=dates, y=rates, name='Interest Rate', color='coral')
-        chart.set_title('GDP vs Interest Rates')
+        chart = EconChart(
+            Data(x=dates, y=gdp, name='GDP Growth', color='teal'),
+            Data(x=dates, y=rates, name='Interest Rate', color='coral'),
+            title='GDP vs Interest Rates',
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "multi_series_scale.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -256,13 +268,14 @@ class TestHoverTooltips:
         dates = [datetime(2020, 1, 1) + timedelta(days=i*30) for i in range(12)]
         values = [10.0, 20.0, 30.0, 25.0, 35.0, 45.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0]
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Test Data', color='teal')
-        chart.set_title('Hover Test')
-        chart.enable_unified_spikeline()
+        chart = EconChart(
+            Data(x=dates, y=values, name='Test Data', color='teal'),
+            title='Hover Test',
+        )
+        board = EconBoard(chart, height=400, crosshair=True)
 
         html_path = html_dir / "hover_test.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -304,11 +317,13 @@ class TestHoverTooltips:
         dates = [datetime(2020, 1, 1) + timedelta(days=i*30) for i in range(12)]
         values = [100.5, 200.25, 150.75, 175.0, 225.5, 250.0, 275.25, 300.0, 325.5, 350.75, 375.0, 400.25]
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Accurate Data', color='sky')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Accurate Data', color='sky'),
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "hover_accuracy.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -337,12 +352,14 @@ class TestZoomFunctionality:
         """Test that dragging to select an area zooms the chart."""
         dates, values = get_gdp_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
-        chart.set_title('Zoom Test')
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP', color='teal'),
+            title='Zoom Test',
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "zoom_test.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -401,11 +418,13 @@ class TestZoomFunctionality:
         """Test that double-click resets zoom."""
         dates, values = get_inflation_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Inflation', color='coral')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Inflation', color='coral'),
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "zoom_reset_test.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -472,14 +491,23 @@ class TestDOMStructure:
         """Verify essential chart DOM elements exist."""
         dates, values = get_gdp_data()
 
-        chart = EconChart(num_rows=2, subplot_titles=('Chart 1', 'Chart 2'), height=500)
-        chart.add_line(row=1, x=dates, y=values, name='Series 1', color='teal')
-        chart.add_line(row=2, x=dates, y=[v * 0.5 for v in values], name='Series 2', color='coral')
-        chart.set_title('DOM Test Chart')
-        chart.set_legend(orientation='h', position='top')
+        chart1 = EconChart(
+            Data(x=dates, y=values, name='Series 1', color='teal'),
+            title='Chart 1',
+        )
+        chart2 = EconChart(
+            Data(x=dates, y=[v * 0.5 for v in values], name='Series 2', color='coral'),
+            title='Chart 2',
+        )
+        board = EconBoard(
+            chart1, chart2,
+            title='DOM Test Chart',
+            height=500,
+            legend='top',
+        )
 
         html_path = html_dir / "dom_structure.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -518,13 +546,22 @@ class TestDOMStructure:
         dates, values = get_gdp_data()
 
         titles = ('GDP Growth', 'Inflation Rate', 'Unemployment')
-        chart = EconChart(num_rows=3, subplot_titles=titles, height=700)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
-        chart.add_line(row=2, x=dates, y=[v * 0.3 for v in values], name='Inflation', color='coral')
-        chart.add_line(row=3, x=dates, y=[abs(v) * 0.2 for v in values], name='Unemployment', color='sky')
+        gdp_chart = EconChart(
+            Data(x=dates, y=values, name='GDP', color='teal'),
+            title=titles[0],
+        )
+        inflation_chart = EconChart(
+            Data(x=dates, y=[v * 0.3 for v in values], name='Inflation', color='coral'),
+            title=titles[1],
+        )
+        unemployment_chart = EconChart(
+            Data(x=dates, y=[abs(v) * 0.2 for v in values], name='Unemployment', color='sky'),
+            title=titles[2],
+        )
+        board = EconBoard(gdp_chart, inflation_chart, unemployment_chart, height=700)
 
         html_path = html_dir / "subplot_titles.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -556,12 +593,14 @@ class TestColorTheme:
         """Verify dark theme colors are applied."""
         dates, values = get_stock_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Stock', color='gold')
-        chart.set_title('Dark Theme Test')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Stock', color='gold'),
+            title='Dark Theme Test',
+        )
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "dark_theme.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -598,12 +637,14 @@ class TestColorTheme:
             'zero_line': 'rgba(200, 200, 255, 0.3)',
         }
 
-        chart = EconChart(num_rows=1, height=400, colors=custom_colors)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='#88ff88')
-        chart.set_title('Custom Colors')
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP', color='#88ff88'),
+            title='Custom Colors',
+        )
+        board = EconBoard(chart, height=400, colors=custom_colors)
 
         html_path = html_dir / "custom_colors.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -633,15 +674,16 @@ class TestRecessionShading:
         """Test that recession shading is applied by default."""
         dates, values = get_unemployment_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
-        # Recession shading is now enabled by default - no need to call add_recession_shading()
-        chart.set_title('Unemployment with Recession Shading')
-        chart.set_yaxis(row=1, title='%')
-        chart.enable_unified_spikeline()
+        chart = EconChart(
+            Data(x=dates, y=values, name='Unemployment', color='coral'),
+            title='Unemployment with Recession Shading',
+            y_label='%',
+        )
+        # Recession shading is now enabled by default
+        board = EconBoard(chart, height=400, crosshair=True)
 
         html_path = html_dir / "recession_basic.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -664,14 +706,16 @@ class TestRecessionShading:
         """Test that recession shading aligns with the time axis."""
         dates, values = get_gdp_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP', color='teal'),
+            title='GDP with Recession Shading',
+            horizontal_line=0,
+        )
         # Recession shading is enabled by default
-        chart.set_title('GDP with Recession Shading')
-        chart.add_hline(row=1, y=0)
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "recession_alignment.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -704,13 +748,15 @@ class TestRecessionShading:
         """Test that recession shading adjusts when zooming."""
         dates, values = get_unemployment_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Unemployment', color='coral'),
+            title='Recession Shading Zoom Test',
+        )
         # Recession shading is enabled by default
-        chart.set_title('Recession Shading Zoom Test')
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "recession_zoom.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -777,23 +823,30 @@ class TestRecessionShading:
         unemp_dates, unemp_values = get_unemployment_data()
         inf_dates, inf_values = get_inflation_data()
 
-        chart = EconChart(
-            num_rows=3,
-            subplot_titles=('GDP Growth', 'Unemployment', 'Inflation'),
-            height=700,
+        gdp_chart = EconChart(
+            Data(x=gdp_dates, y=gdp_values, name='GDP', color='teal'),
+            title='GDP Growth',
+            horizontal_line=0,
+        )
+        unemployment_chart = EconChart(
+            Data(x=unemp_dates, y=unemp_values, name='Unemployment', color='coral'),
+            title='Unemployment',
+        )
+        inflation_chart = EconChart(
+            Data(x=inf_dates, y=inf_values, name='Inflation', color='sky'),
+            title='Inflation',
+            horizontal_line=2.0,
         )
 
-        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
-        chart.add_line(row=2, x=unemp_dates, y=unemp_values, name='Unemployment', color='coral')
-        chart.add_line(row=3, x=inf_dates, y=inf_values, name='Inflation', color='sky')
-
         # Recession shading is enabled by default and applies to all rows
-        chart.add_hline(row=1, y=0)
-        chart.add_hline(row=3, y=2.0)
-        chart.enable_unified_spikeline()
+        board = EconBoard(
+            gdp_chart, unemployment_chart, inflation_chart,
+            height=700,
+            crosshair=True,
+        )
 
         html_path = html_dir / "recession_multi_subplot.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -813,94 +866,23 @@ class TestRecessionShading:
             page.screenshot(path=str(screenshots_dir / "recession_multi_subplot.png"))
             browser.close()
 
-    def test_recession_shading_single_row(self, html_dir, screenshots_dir):
-        """Test recession shading on a specific row only."""
-        gdp_dates, gdp_values = get_gdp_data()
-        unemp_dates, unemp_values = get_unemployment_data()
-
-        chart = EconChart(
-            num_rows=2,
-            subplot_titles=('GDP Growth', 'Unemployment'),
-            height=500,
-        )
-
-        chart.add_line(row=1, x=gdp_dates, y=gdp_values, name='GDP', color='teal')
-        chart.add_line(row=2, x=unemp_dates, y=unemp_values, name='Unemployment', color='coral')
-
-        # Configure recession shading to apply only to row 2
-        chart.configure_recession_shading(row=2)
-
-        html_path = html_dir / "recession_single_row.html"
-        chart.to_html(str(html_path))
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(f"file://{html_path}")
-            wait_for_plotly_ready(page)
-
-            # Get shapes and their yref to verify they're only on row 2
-            shapes = page.evaluate('''() => {
-                const gd = document.querySelector('.js-plotly-plot');
-                if (!gd._fullLayout.shapes) return [];
-                return gd._fullLayout.shapes.map(s => ({
-                    yref: s.yref
-                }));
-            }''')
-
-            # All shapes should reference y2 (row 2)
-            for shape in shapes:
-                assert 'y2' in shape['yref'], f"Shape not on row 2: {shape['yref']}"
-
-            page.screenshot(path=str(screenshots_dir / "recession_single_row.png"))
-            browser.close()
-
-    def test_recession_shading_custom_periods(self, html_dir, screenshots_dir):
-        """Test custom recession periods."""
-        dates, values = get_gdp_data()
-
-        # Define custom recession periods
-        custom_recessions = [
-            (datetime(2007, 12, 1), datetime(2009, 6, 1)),  # Great Recession
-            (datetime(2020, 2, 1), datetime(2020, 4, 1)),   # COVID
-        ]
-
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
-        chart.configure_recession_shading(recessions=custom_recessions)
-        chart.set_title('GDP with Custom Recession Periods')
-
-        html_path = html_dir / "recession_custom.html"
-        chart.to_html(str(html_path))
-
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(f"file://{html_path}")
-            wait_for_plotly_ready(page)
-
-            shape_count = page.evaluate('''() => {
-                const gd = document.querySelector('.js-plotly-plot');
-                return gd._fullLayout.shapes ? gd._fullLayout.shapes.length : 0;
-            }''')
-
-            # Should have exactly 2 shapes (one for each custom period)
-            assert shape_count == 2, f"Expected 2 recession shapes, got {shape_count}"
-
-            page.screenshot(path=str(screenshots_dir / "recession_custom.png"))
-            browser.close()
-
     def test_recession_shading_custom_color(self, html_dir, screenshots_dir):
         """Test custom recession shading color and opacity."""
         dates, values = get_unemployment_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='Unemployment', color='coral')
-        chart.configure_recession_shading(color='red', opacity=0.25)
-        chart.set_title('Unemployment with Custom Recession Color')
+        chart = EconChart(
+            Data(x=dates, y=values, name='Unemployment', color='coral'),
+            title='Unemployment with Custom Recession Color',
+        )
+        board = EconBoard(
+            chart,
+            height=400,
+            recession_color='red',
+            recession_opacity=0.25,
+        )
 
         html_path = html_dir / "recession_custom_color.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -930,13 +912,14 @@ class TestRecessionShading:
         """Test that recession shading can be disabled."""
         dates, values = get_gdp_data()
 
-        chart = EconChart(num_rows=1, height=400)
-        chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
-        chart.disable_recession_shading()  # Disable the default recession shading
-        chart.set_title('GDP without Recession Shading')
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP', color='teal'),
+            title='GDP without Recession Shading',
+        )
+        board = EconBoard(chart, height=400, show_recessions=False)
 
         html_path = html_dir / "recession_disabled.html"
-        chart.to_html(str(html_path))
+        board.to_html(str(html_path))
 
         with sync_playwright() as p:
             browser = p.chromium.launch()

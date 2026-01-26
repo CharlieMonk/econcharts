@@ -1,8 +1,15 @@
-"""Reusable economic chart class with dark theme support and multi-subplot capabilities."""
+"""Reusable economic chart classes with dark theme support and multi-chart capabilities.
+
+Classes:
+    Data: A data series for a chart (x, y, name, styling options)
+    EconChart: A single chart with data and axis configuration
+    EconBoard: Multiple charts displayed together in a vertical stack
+"""
 
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Sequence
 
@@ -16,89 +23,270 @@ from econcharts.recessions import NBER_RECESSIONS, get_recessions_in_range
 _MODULE_DIR = os.path.dirname(__file__)
 
 
+def _load_yaml(filename: str) -> dict:
+    """Load a YAML file from the module directory."""
+    with open(os.path.join(_MODULE_DIR, filename), 'r') as f:
+        return yaml.safe_load(f)
+
+
+# Load YAML configuration as module-level variables
+_defaults = _load_yaml('defaults.yaml')
+palette = _load_yaml('colors.yaml')
+
+# Create sorted color list for auto-assignment
+_sorted_colors = sorted(palette.keys())
+
+
+def resolve_color(color: str) -> str:
+    """
+    Resolve a color name to its hex value.
+
+    Args:
+        color: Either a hex/rgb color string or a named color
+               from the palette (e.g., 'teal', 'coral')
+
+    Returns:
+        Hex or rgb color string
+
+    Examples:
+        >>> resolve_color('teal')
+        '#00d4aa'
+        >>> resolve_color('#ff0000')
+        '#ff0000'
+    """
+    if color.startswith(('#', 'rgb')):
+        return color
+    return palette.get(color.lower(), color)
+
+
+@dataclass
+class Data:
+    """A data series for a chart.
+
+    Args:
+        x: X-axis values (dates, numbers, etc.)
+        y: Y-axis values
+        name: Label shown in legend
+        color: Color for the trace. Auto-assigned if not specified.
+        style: 'line' or 'scatter'
+        line_width: Line width. Default from defaults.yaml: line.width
+        line_style: 'solid', 'dashed', 'dotted', etc.
+        marker_size: Marker size for scatter. Default from defaults.yaml: scatter.marker_size
+        visible: Show this data series
+        show_in_legend: Include in legend
+    """
+    x: Any
+    y: Any
+    name: str
+    color: str | None = None
+    style: str = 'line'
+    line_width: float | None = None
+    line_style: str | None = None
+    marker_size: int | None = None
+    visible: bool = True
+    show_in_legend: bool = True
+
+
 class EconChart:
-    """
-    A configurable multi-subplot chart builder with dark theme support.
+    """A single chart with data and axis configuration.
 
-    Provides a fluent interface for building economic/financial charts with
-    consistent styling, unified spike lines, and flexible layout options.
+    Args:
+        *data: Data instances to display on this chart
+        title: Chart title (displayed above the subplot)
+        height: Relative height in multi-chart layout (default 1.0)
+        y_label: Y-axis label
+        y_label_color: Y-axis label color
+        y_scale: 'linear' or 'log'
+        x_label: X-axis label
+        x_tick_format: Format for tick labels (e.g., '%b %Y')
+        x_range: (min, max) range for x-axis
+        horizontal_line: Y-value for a horizontal reference line
+        horizontal_line_color: Color for the horizontal line
+        horizontal_lines: Multiple lines: [{y, color}, ...]
 
-    Example usage:
+    Example:
         chart = EconChart(
-            num_rows=3,
-            subplot_titles=('Revenue', 'Costs', 'Profit'),
-            height=700,
+            Data(x=dates, y=values, name='GDP'),
+            title="GDP Growth",
+            y_label='% YoY',
+            horizontal_line=0,
         )
-        chart.add_line(row=1, x=dates, y=revenue, name='Revenue', color='teal')
-        chart.add_line(row=2, x=dates, y=costs, name='Costs', color='coral')
-        chart.add_line(row=3, x=dates, y=profit, name='Profit', color='gold')
-        chart.add_hline(row=3, y=0)
-        chart.enable_unified_spikeline()
-        fig = chart.build()
-        fig.show()
     """
-
-    @staticmethod
-    def _load_yaml(filename: str) -> dict:
-        """Load a YAML file from the module directory."""
-        with open(os.path.join(_MODULE_DIR, filename), 'r') as f:
-            return yaml.safe_load(f)
-
-    # Load YAML configuration as class variables
-    _defaults = _load_yaml('defaults.yaml')
-    palette = _load_yaml('colors.yaml')
-
 
     def __init__(
         self,
-        num_rows: int,
-        row_heights: list[float] | None = None,
+        *data: Data,
         title: str | None = None,
-        subplot_titles: tuple[str, ...] | None = None,
-        colors: dict[str, str] | None = None,
-        shared_xaxes: bool | None = None,
-        vertical_spacing: float | None = None,
-        height: int | None = None,
+        height: float = 1.0,
+        y_label: str | None = None,
+        y_label_color: str | None = None,
+        y_scale: str = 'linear',
+        x_label: str | None = None,
+        x_tick_format: str | None = None,
+        x_range: tuple | None = None,
+        horizontal_line: float | None = None,
+        horizontal_line_color: str | None = None,
+        horizontal_lines: list[dict] | None = None,
     ) -> None:
-        """
-        Initialize an EconChart.
+        self.data = list(data)
+        self.title = title
+        self.height = height
+        self.y_label = y_label
+        self.y_label_color = y_label_color
+        self.y_scale = y_scale
+        self.x_label = x_label
+        self.x_tick_format = x_tick_format
+        self.x_range = x_range
+        self.horizontal_line = horizontal_line
+        self.horizontal_line_color = horizontal_line_color
+        self.horizontal_lines = horizontal_lines or []
 
-        Args:
-            num_rows: Number of subplot rows
-            row_heights: List of relative heights for each row. Auto-equal if None.
-            subplot_titles: Tuple of titles for each subplot
-            colors: Theme colors dict (defaults to colors from defaults.yaml)
-            shared_xaxes: Whether to share x-axes across subplots
-            vertical_spacing: Spacing between subplots (0-1)
-            height: Chart height in pixels
-        """
-        self.num_rows = num_rows
-        self.height = height or EconChart._defaults['chart']['height']
-        self._spike_enabled = False
-        self._recession_enabled = True
-        self._recession_config: dict[str, Any] = {}
+    def _compute_x_range(self) -> tuple | None:
+        """Compute the x range from all data series."""
+        x_min = None
+        x_max = None
+        for d in self.data:
+            try:
+                if hasattr(d.x, '__len__') and len(d.x) > 0:
+                    curr_min, curr_max = min(d.x), max(d.x)
+                    if x_min is None or curr_min < x_min:
+                        x_min = curr_min
+                    if x_max is None or curr_max > x_max:
+                        x_max = curr_max
+            except (TypeError, ValueError):
+                pass
+        if x_min is not None and x_max is not None:
+            return (x_min, x_max)
+        return None
+
+
+class EconBoard:
+    """Multiple charts displayed together in a vertical stack.
+
+    Args:
+        *charts: EconChart instances to display
+        title: Overall title for all charts
+        height: Total figure height in pixels. Default: 600 from defaults.yaml
+        spacing: Vertical spacing between charts. Default: 0.05 from defaults.yaml
+        share_x_axis: Sync x-axis zoom across charts. Default: True from defaults.yaml
+        legend: Legend position: 'top', 'bottom', or 'right'. Default: 'bottom'
+        legend_orientation: 'horizontal' or 'vertical'. Default: 'horizontal'
+        margin_top: Top margin in pixels. Default: 55 from defaults.yaml
+        margin_bottom: Bottom margin in pixels. Default: 35 from defaults.yaml
+        margin_left: Left margin in pixels. Default: 55 from defaults.yaml
+        margin_right: Right margin in pixels. Default: 55 from defaults.yaml
+        crosshair: Show vertical line on hover. Default: False
+        crosshair_color: Crosshair color. Default from defaults.yaml: colors.crosshair
+        show_recessions: Shade recession periods. Default: True
+        recession_color: Recession shading color. Default: 'gray' from defaults.yaml
+        recession_opacity: Recession shading opacity. Default: 0.15 from defaults.yaml
+        colors: Custom color theme dict
+
+    Example:
+        gdp = EconChart(Data(x=dates, y=gdp_values, name='GDP'), title="GDP")
+        inflation = EconChart(Data(x=dates, y=cpi_values, name='CPI'), title="Inflation")
+        board = EconBoard(gdp, inflation, crosshair=True)
+        board.show()
+    """
+
+    # Class-level access to palette
+    palette = palette
+
+    def __init__(
+        self,
+        *charts: EconChart,
+        title: str | None = None,
+        height: int | None = None,
+        spacing: float | None = None,
+        share_x_axis: bool | None = None,
+        legend: str | None = None,
+        legend_orientation: str | None = None,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        crosshair: bool = False,
+        crosshair_color: str | None = None,
+        show_recessions: bool = True,
+        recession_color: str | None = None,
+        recession_opacity: float | None = None,
+        colors: dict[str, str] | None = None,
+    ) -> None:
+        self.charts = list(charts)
+        self.title = title
+        self.height = height if height is not None else _defaults['chart']['height']
+        self.spacing = spacing if spacing is not None else _defaults['chart']['vertical_spacing']
+        self.share_x_axis = share_x_axis if share_x_axis is not None else _defaults['chart']['shared_xaxes']
+        self.crosshair = crosshair
+        self.show_recessions = show_recessions
+
+        # Legend settings
+        self.legend_position = legend or _defaults['legend']['position']
+        self.legend_orientation = legend_orientation or _defaults['legend']['orientation']
+
+        # Margins
+        self.margin_top = margin_top if margin_top is not None else _defaults['margins']['top']
+        self.margin_bottom = margin_bottom if margin_bottom is not None else _defaults['margins']['bottom']
+        self.margin_left = margin_left if margin_left is not None else _defaults['margins']['left']
+        self.margin_right = margin_right if margin_right is not None else _defaults['margins']['right']
+
+        # Crosshair settings
+        crosshair_defaults = _defaults.get('crosshair', {})
+        self.crosshair_color = crosshair_color or _defaults['colors'].get('crosshair') or _defaults['colors']['spike']
+
+        # Recession settings
+        self.recession_color = recession_color or _defaults['recession']['color']
+        self.recession_opacity = recession_opacity if recession_opacity is not None else _defaults['recession']['opacity']
+
+        # Theme colors
+        self._colors = {**_defaults['colors'], **(colors or {})}
+
+        # Figure will be created in build()
+        self.fig: go.Figure | None = None
         self._x_range: tuple | None = None
 
-        # Merge custom colors with defaults
-        self._colors = {**EconChart._defaults['colors'], **(colors or {})}
+    @staticmethod
+    def resolve_color(color: str) -> str:
+        """Resolve a color name to its hex value."""
+        return resolve_color(color)
 
-        # Apply defaults
-        shared_xaxes = shared_xaxes if shared_xaxes is not None else EconChart._defaults['chart']['shared_xaxes']
-        vertical_spacing = vertical_spacing if vertical_spacing is not None else EconChart._defaults['chart']['vertical_spacing']
-        row_heights = row_heights or [1.0 / num_rows] * num_rows
+    def _compute_global_x_range(self) -> tuple | None:
+        """Compute x range across all charts."""
+        x_min = None
+        x_max = None
+        for chart in self.charts:
+            chart_range = chart._compute_x_range()
+            if chart_range:
+                if x_min is None or chart_range[0] < x_min:
+                    x_min = chart_range[0]
+                if x_max is None or chart_range[1] > x_max:
+                    x_max = chart_range[1]
+        if x_min is not None and x_max is not None:
+            return (x_min, x_max)
+        return None
 
+    def build(self) -> go.Figure:
+        """Build and return the Plotly figure."""
+        num_rows = len(self.charts)
+        if num_rows == 0:
+            raise ValueError("EconBoard requires at least one EconChart")
+
+        # Calculate row heights from chart.height values
+        total_height = sum(c.height for c in self.charts)
+        row_heights = [c.height / total_height for c in self.charts]
+
+        # Collect subplot titles
+        subplot_titles = tuple(c.title or '' for c in self.charts)
+
+        # Create subplots
         self.fig = make_subplots(
             rows=num_rows,
             cols=1,
             row_heights=row_heights,
-            shared_xaxes=shared_xaxes,
-            vertical_spacing=vertical_spacing,
-            subplot_titles=subplot_titles,
+            shared_xaxes=self.share_x_axis,
+            vertical_spacing=self.spacing,
+            subplot_titles=subplot_titles if any(subplot_titles) else None,
         )
-
-        self.set_margins()
-        self.set_legend()
-        self.set_title(title)
 
         # Apply theme layout
         self.fig.update_layout(
@@ -106,19 +294,36 @@ class EconChart:
             hovermode='x unified',
             paper_bgcolor=self._colors['paper'],
             plot_bgcolor=self._colors['background'],
-            font=dict(color=self._colors['text'], size=EconChart._defaults['fonts']['main']),
+            font=dict(color=self._colors['text'], size=_defaults['fonts']['main']),
             hoverlabel=dict(
                 bgcolor=self._colors['paper'],
-                font_size=EconChart._defaults['fonts']['hoverlabel'],
+                font_size=_defaults['fonts']['hoverlabel'],
                 font_color=self._colors['text'],
             ),
         )
 
+        # Apply margins
+        self.fig.update_layout(margin=dict(
+            t=self.margin_top,
+            l=self.margin_left,
+            r=self.margin_right,
+            b=self.margin_bottom,
+        ))
 
+        # Apply title
+        if self.title:
+            self.fig.update_layout(
+                title=dict(
+                    text=self.title,
+                    font=dict(size=_defaults['fonts']['chart_title'], color=self._colors['text']),
+                    y=0.99,
+                    yanchor='top',
+                )
+            )
 
         # Style subplot titles
-        if subplot_titles:
-            title_font = dict(size=EconChart._defaults['fonts']['subplot_title'], color=self._colors['text'])
+        if any(subplot_titles):
+            title_font = dict(size=_defaults['fonts']['subplot_title'], color=self._colors['text'])
             for annotation in self.fig['layout']['annotations']:
                 annotation['font'] = title_font
 
@@ -127,511 +332,156 @@ class EconChart:
             self.fig.update_xaxes(gridcolor=self._colors['grid'], row=row, col=1)
             self.fig.update_yaxes(gridcolor=self._colors['grid'], row=row, col=1)
 
-    @staticmethod
-    def resolve_color(color: str) -> str:
-        """
-        Resolve a color name to its hex value.
+        # Apply legend settings
+        self._apply_legend()
 
-        Args:
-            color: Either a hex/rgb color string or a named color
-                   from the palette (e.g., 'teal', 'coral')
+        # Add traces from each chart
+        color_index = 0  # Global color index for auto-assignment
+        for row_idx, chart in enumerate(self.charts, start=1):
+            for data in chart.data:
+                # Auto-assign color if not specified
+                trace_color = data.color
+                if trace_color is None:
+                    trace_color = _sorted_colors[color_index % len(_sorted_colors)]
+                    color_index += 1
+                trace_color = resolve_color(trace_color)
 
-        Returns:
-            Hex or rgb color string
+                # Create trace based on style
+                if data.style == 'scatter':
+                    self.fig.add_trace(
+                        go.Scatter(
+                            x=data.x,
+                            y=data.y,
+                            name=data.name,
+                            mode='markers',
+                            marker=dict(
+                                color=trace_color,
+                                size=data.marker_size or _defaults['scatter']['marker_size'],
+                            ),
+                            visible=data.visible,
+                            showlegend=data.show_in_legend,
+                        ),
+                        row=row_idx,
+                        col=1,
+                    )
+                else:  # line (default)
+                    line_dict: dict[str, Any] = {
+                        'color': trace_color,
+                        'width': data.line_width or _defaults['line']['width'],
+                    }
+                    if data.line_style:
+                        # Map common names to Plotly dash values
+                        dash_map = {
+                            'solid': 'solid',
+                            'dashed': 'dash',
+                            'dotted': 'dot',
+                            'dash': 'dash',
+                            'dot': 'dot',
+                            'dashdot': 'dashdot',
+                        }
+                        line_dict['dash'] = dash_map.get(data.line_style, data.line_style)
 
-        Examples:
-            >>> EconChart.resolve_color('teal')
-            '#00d4aa'
-            >>> EconChart.resolve_color('#ff0000')
-            '#ff0000'
-        """
-        if color.startswith(('#', 'rgb')):
-            return color
-        return EconChart.palette.get(color.lower(), color)
+                    self.fig.add_trace(
+                        go.Scatter(
+                            x=data.x,
+                            y=data.y,
+                            name=data.name,
+                            line=line_dict,
+                            visible=data.visible,
+                            showlegend=data.show_in_legend,
+                        ),
+                        row=row_idx,
+                        col=1,
+                    )
 
-    def _add_trace(
-        self,
-        row: int,
-        x: Any,
-        y: Any,
-        name: str,
-        trace_kwargs: dict[str, Any],
-        hover_template: str | None,
-        legendgroup: str | None,
-    ) -> None:
-        """Add a trace to the chart with common options."""
-        if hover_template:
-            trace_kwargs['hovertemplate'] = hover_template
-        if legendgroup:
-            trace_kwargs['legendgroup'] = legendgroup
+                # Track x range
+                self._update_x_range(data.x)
 
-        self.fig.add_trace(go.Scatter(x=x, y=y, name=name, **trace_kwargs), row=row, col=1)
-        self._update_x_range(x)
+            # Apply y-axis settings
+            y_kwargs: dict[str, Any] = {'type': chart.y_scale}
+            if chart.y_label:
+                y_kwargs['title_text'] = chart.y_label
+                y_kwargs['title_font'] = dict(
+                    size=_defaults['fonts']['axis_title'],
+                    color=chart.y_label_color or self._colors['text'],
+                )
+            self.fig.update_yaxes(row=row_idx, col=1, **y_kwargs)
 
-    def add_line(
-        self,
-        row: int,
-        x: Any,
-        y: Any,
-        name: str,
-        color: str,
-        width: float | None = None,
-        dash: str | None = None,
-        hover_template: str | None = None,
-        visible: bool | str = True,
-        legendgroup: str | None = None,
-        showlegend: bool = True,
-    ) -> EconChart:
-        """
-        Add a line trace to the chart.
+            # Apply x-axis settings
+            x_kwargs: dict[str, Any] = {}
+            if chart.x_label:
+                x_kwargs['title_text'] = chart.x_label
+                x_kwargs['title_font'] = dict(
+                    size=_defaults['fonts']['axis_title'],
+                    color=self._colors['text'],
+                )
+            if chart.x_tick_format:
+                x_kwargs['tickformat'] = chart.x_tick_format
+            if chart.x_range:
+                x_kwargs['range'] = chart.x_range
+            if x_kwargs:
+                self.fig.update_xaxes(row=row_idx, col=1, **x_kwargs)
 
-        Args:
-            row: Row number (1-indexed)
-            x: X-axis data
-            y: Y-axis data
-            name: Trace name for legend
-            color: Line color (hex like '#ff0000' or name like 'teal', 'coral')
-            width: Line width
-            dash: Line dash style ('solid', 'dot', 'dash', 'longdash', 'dashdot')
-            hover_template: Custom hover template
-            visible: True, False, or 'legendonly'
-            legendgroup: Group name for synchronized legend toggling
-            showlegend: Whether to show in legend
-
-        Returns:
-            Self for method chaining
-        """
-        line_dict: dict[str, Any] = {
-            'color': self.resolve_color(color),
-            'width': width or EconChart._defaults['line']['width'],
-        }
-        if dash:
-            line_dict['dash'] = dash
-
-        self._add_trace(
-            row=row,
-            x=x,
-            y=y,
-            name=name,
-            trace_kwargs={'line': line_dict, 'visible': visible, 'showlegend': showlegend},
-            hover_template=hover_template,
-            legendgroup=legendgroup,
-        )
-        return self
-
-    def add_scatter(
-        self,
-        row: int,
-        x: Any,
-        y: Any,
-        name: str,
-        color: str,
-        marker_size: int | None = None,
-        hover_template: str | None = None,
-        visible: bool | str = True,
-        legendgroup: str | None = None,
-        showlegend: bool = True,
-    ) -> EconChart:
-        """
-        Add a scatter (markers only) trace to the chart.
-
-        Args:
-            row: Row number (1-indexed)
-            x: X-axis data
-            y: Y-axis data
-            name: Trace name for legend
-            color: Marker color (hex like '#ff0000' or name like 'teal', 'coral')
-            marker_size: Marker size
-            hover_template: Custom hover template
-            visible: True, False, or 'legendonly'
-            legendgroup: Group name for synchronized legend toggling
-            showlegend: Whether to show in legend
-
-        Returns:
-            Self for method chaining
-        """
-        self._add_trace(
-            row=row,
-            x=x,
-            y=y,
-            name=name,
-            trace_kwargs={
-                'mode': 'markers',
-                'marker': dict(color=self.resolve_color(color), size=marker_size or EconChart._defaults['scatter']['marker_size']),
-                'visible': visible,
-                'showlegend': showlegend,
-            },
-            hover_template=hover_template,
-            legendgroup=legendgroup,
-        )
-        return self
-
-    def set_yaxis(
-        self,
-        row: int,
-        title: str | None = None,
-        title_color: str | None = None,
-        scale_type: str = 'linear',
-        gridcolor: str | None = None,
-    ) -> EconChart:
-        """
-        Configure y-axis for a specific row.
-
-        Args:
-            row: Row number (1-indexed)
-            title: Axis title
-            title_color: Title color (defaults to text color)
-            scale_type: 'linear' or 'log'
-            gridcolor: Grid line color
-
-        Returns:
-            Self for method chaining
-        """
-        update_kwargs: dict[str, Any] = {'type': scale_type}
-
-        if title:
-            update_kwargs['title_text'] = title
-            update_kwargs['title_font'] = dict(
-                size=EconChart._defaults['fonts']['axis_title'],
-                color=title_color or self._colors['text'],
-            )
-
-        if gridcolor:
-            update_kwargs['gridcolor'] = gridcolor
-
-        self.fig.update_yaxes(row=row, col=1, **update_kwargs)
-        return self
-
-    def set_xaxis(
-        self,
-        row: int,
-        title: str | None = None,
-        tick_format: str | None = None,
-        hover_format: str | None = None,
-        range: tuple | None = None,
-        gridcolor: str | None = None,
-    ) -> EconChart:
-        """
-        Configure x-axis for a specific row.
-
-        Args:
-            row: Row number (1-indexed)
-            title: Axis title
-            tick_format: Tick label format (e.g., '%b %Y' for dates)
-            hover_format: Hover label format
-            range: Tuple of (min, max) for axis range
-            gridcolor: Grid line color
-
-        Returns:
-            Self for method chaining
-        """
-        update_kwargs: dict[str, Any] = {}
-
-        if title:
-            update_kwargs['title_text'] = title
-            update_kwargs['title_font'] = dict(
-                size=EconChart._defaults['fonts']['axis_title'],
-                color=self._colors['text'],
-            )
-
-        if tick_format:
-            update_kwargs['tickformat'] = tick_format
-        if hover_format:
-            update_kwargs['hoverformat'] = hover_format
-        if range:
-            update_kwargs['range'] = range
-        if gridcolor:
-            update_kwargs['gridcolor'] = gridcolor
-
-        if update_kwargs:
-            self.fig.update_xaxes(row=row, col=1, **update_kwargs)
-        return self
-
-    def add_hline(
-        self,
-        row: int,
-        y: float,
-        color: str | None = None,
-        dash: str | None = None,
-        width: float | None = None,
-    ) -> EconChart:
-        """
-        Add a horizontal reference line to a subplot.
-
-        Args:
-            row: Row number (1-indexed)
-            y: Y-value for the line
-            color: Line color (defaults to zero_line color)
-            dash: Line dash style
-            width: Line width
-
-        Returns:
-            Self for method chaining
-        """
-        self.fig.add_hline(
-            y=y,
-            line_dash=dash or EconChart._defaults['hline']['dash'],
-            line_color=color or self._colors['zero_line'],
-            line_width=width or EconChart._defaults['hline']['width'],
-            row=row,
-            col=1,
-        )
-        return self
-
-    def disable_recession_shading(self) -> EconChart:
-        """
-        Disable automatic recession shading.
-
-        By default, recession shading is enabled and will be applied when
-        the chart is built. Call this method to disable it.
-
-        Returns:
-            Self for method chaining.
-
-        Example:
-            chart = econcharts(num_rows=1)
-            chart.add_line(row=1, x=dates, y=values, name='Data', color='teal')
-            chart.disable_recession_shading()  # No recession shading
-            chart.show()
-        """
-        self._recession_enabled = False
-        return self
-
-    def configure_recession_shading(
-        self,
-        rows: str | list[int] = 'all',
-        recessions: Sequence[tuple[datetime, datetime]] | None = None,
-        color: str | None = None,
-        opacity: float | None = None,
-    ) -> EconChart:
-        """
-        Configure recession shading options.
-
-        Recession shading is enabled by default. Use this method to customize
-        the appearance or specify custom recession periods.
-
-        Args:
-            rows: 'all' to apply to all rows, or a list
-                of row numbers to apply to specific rows (e.g., [1, 3]).
-            recessions: Custom list of (start, end) datetime tuples defining
-                recession periods. If None, uses NBER recession dates.
-            color: Fill color for recession shading. Defaults to gray.
-            opacity: Fill opacity (0-1). Defaults from config.
-
-        Returns:
-            Self for method chaining.
-
-        Example:
-            # Custom recession periods with custom color
-            from datetime import datetime
-            custom = [
-                (datetime(2007, 12, 1), datetime(2009, 6, 1)),
-                (datetime(2020, 2, 1), datetime(2020, 4, 1)),
-            ]
-            chart.configure_recession_shading(recessions=custom, color='red', opacity=0.2)
-        """
-        self._recession_config = {
-            'row': rows,
-            'recessions': recessions,
-            'color': color,
-            'opacity': opacity,
-        }
-        return self
-
-    def _apply_recession_shading(self) -> None:
-        """Apply recession shading to the chart."""
-        # Get config or defaults
-        config = self._recession_config
-        row = config.get('row')
-        recessions = config.get('recessions')
-        color = config.get('color')
-        opacity = config.get('opacity')
-
-        # Get recession defaults
-        recession_defaults = EconChart._defaults.get('recession', {})
-        fill_color = color or recession_defaults.get('color')
-        fill_opacity = opacity or recession_defaults.get('opacity')
-
-        # Resolve named color
-        fill_color = self.resolve_color(fill_color)
-
-        # Use NBER recessions if not specified
-        recession_periods = recessions or NBER_RECESSIONS
-
-        # Filter recessions to the current x-axis range if available
-        if self._x_range is not None:
-            try:
-                start_dt = self._x_range[0]
-                end_dt = self._x_range[1]
-                # Convert to datetime if needed
-                if hasattr(start_dt, 'to_pydatetime'):
-                    start_dt = start_dt.to_pydatetime()
-                if hasattr(end_dt, 'to_pydatetime'):
-                    end_dt = end_dt.to_pydatetime()
-                recession_periods = get_recessions_in_range(start_dt, end_dt, recession_periods)
-            except (TypeError, AttributeError):
-                # If x-axis isn't datetime-compatible, skip recession shading
-                return
-
-        # Add recession shading using add_vrect with row parameter
-        # exclude_empty_subplots=False ensures shapes are added even after
-        # traces are moved to the bottom axis by unified spikeline
-        # Plotly's add_vrect doesn't accept a list, so we iterate when needed
-        rows_to_shade = row if isinstance(row, list) else range(1, self.num_rows+1)
-        for rec_start, rec_end in recession_periods:
-            for r in rows_to_shade:
-                self.fig.add_vrect(
-                    x0=rec_start,
-                    x1=rec_end,
-                    fillcolor=fill_color,
-                    opacity=fill_opacity,
-                    layer='below',
-                    line_width=0,
-                    row=r,
+            # Add horizontal lines
+            if chart.horizontal_line is not None:
+                self.fig.add_hline(
+                    y=chart.horizontal_line,
+                    line_dash=_defaults['hline']['dash'],
+                    line_color=resolve_color(chart.horizontal_line_color) if chart.horizontal_line_color else self._colors['zero_line'],
+                    line_width=_defaults['hline']['width'],
+                    row=row_idx,
                     col=1,
-                    exclude_empty_subplots=False,
                 )
 
-    def enable_unified_spikeline(self, spike_color: str | None = None) -> EconChart:
-        """
-        Enable spike lines that span all subplots.
+            for hline in chart.horizontal_lines:
+                self.fig.add_hline(
+                    y=hline.get('y', 0),
+                    line_dash=_defaults['hline']['dash'],
+                    line_color=resolve_color(hline.get('color', 'gray')),
+                    line_width=_defaults['hline']['width'],
+                    row=row_idx,
+                    col=1,
+                )
 
-        Args:
-            spike_color: Color for the spike line
-
-        Returns:
-            Self for method chaining
-        """
-        self._spike_enabled = True
-        if spike_color:
-            self._colors['spike'] = spike_color
-        return self
-
-    def set_legend(
-        self,
-        orientation: str | None = None,
-        position: str | None = None,
-        xanchor: str | None = None
-    ) -> EconChart:
-        """
-        Configure legend position and orientation.
-
-        Args:
-            orientation: 'h' for horizontal, 'v' for vertical
-            position: 'top', 'bottom', or 'right'
-
-        Returns:
-            Self for method chaining
-        """
-        orientation = orientation or EconChart._defaults['legend']['orientation']
-        position = position or EconChart._defaults['legend']['position']
-        xanchor = xanchor or EconChart._defaults['legend']['xanchor']
-
-        legend_kwargs: dict[str, Any] = {
-            'orientation': orientation,
-            'xanchor': xanchor,
-            'font': dict(size=EconChart._defaults['fonts']['legend'], color=self._colors['text']),
-            'bgcolor': 'rgba(0,0,0,0)',
-        }
-
-        if position in EconChart._defaults['legend_positions']:
-            legend_kwargs.update(EconChart._defaults['legend_positions'][position])
-
-        self.fig.update_layout(legend=legend_kwargs)
-        return self
-
-    def set_margins(
-        self,
-        top: int | None = None,
-        left: int | None = None,
-        right: int | None = None,
-        bottom: int | None = None,
-    ) -> EconChart:
-        """
-        Set chart margins.
-
-        Args:
-            top: Top margin in pixels
-            left: Left margin in pixels
-            right: Right margin in pixels
-            bottom: Bottom margin in pixels
-
-        Returns:
-            Self for method chaining
-        """
-        margins = EconChart._defaults['margins']
-        self.fig.update_layout(margin=dict(
-            t=top or margins['top'],
-            l=left or margins['left'],
-            r=right or margins['right'],
-            b=bottom or margins['bottom'],
-        ))
-        return self
-
-    def set_title(self, text: str, font_size: int | None = None) -> EconChart:
-        """
-        Set chart title.
-
-        Args:
-            text: Title text
-            font_size: Font size
-
-        Returns:
-            Self for method chaining
-        """
-        self.fig.update_layout(
-            title=dict(
-                text=text,
-                font=dict(size=font_size or EconChart._defaults['fonts']['chart_title'], color=self._colors['text']),
-                y=0.99,
-                yanchor='top',
-            )
-        )
-        return self
-
-    def build(self) -> go.Figure:
-        """
-        Finalize and return the Plotly figure.
-
-        Applies recession shading (enabled by default) and unified spike line if enabled.
-
-        Returns:
-            Plotly Figure object
-        """
-        # Apply unified spikeline first (modifies axis bindings)
-        if self._spike_enabled:
+        # Apply crosshair (unified spikeline) if enabled
+        if self.crosshair:
             self._apply_unified_spikeline()
 
         # Apply recession shading
-        if self._recession_enabled:
+        if self.show_recessions:
             self._apply_recession_shading()
 
-            # When unified spikeline is enabled, shapes reference axes that are
-            # now "matched" to the bottom axis, causing them not to render.
-            # Fix by updating all shapes to reference the bottom x-axis.
-            if self._spike_enabled and self.fig.layout.shapes:
-                bottom_xaxis = f'x{self.num_rows}'
+            # Fix shape xref when crosshair is enabled
+            if self.crosshair and self.fig.layout.shapes:
+                bottom_xaxis = f'x{num_rows}'
                 for shape in self.fig.layout.shapes:
                     shape.xref = bottom_xaxis
 
         return self.fig
 
-    def show(self) -> None:
-        """Display the chart."""
-        self.build().show()
+    def _apply_legend(self) -> None:
+        """Apply legend configuration."""
+        orientation = self.legend_orientation
+        position = self.legend_position
 
-    def to_html(self, path: str, include_plotlyjs: bool | str = True) -> None:
-        """
-        Export chart to HTML file.
+        # Map orientation names
+        orientation_map = {'horizontal': 'h', 'vertical': 'v', 'h': 'h', 'v': 'v'}
+        orientation = orientation_map.get(orientation, 'h')
 
-        Args:
-            path: Output file path
-            include_plotlyjs: Whether to include plotly.js ('cdn', True, False)
-        """
-        self.build().write_html(path, include_plotlyjs=include_plotlyjs)
+        legend_kwargs: dict[str, Any] = {
+            'orientation': orientation,
+            'xanchor': _defaults['legend']['xanchor'],
+            'font': dict(size=_defaults['fonts']['legend'], color=self._colors['text']),
+            'bgcolor': 'rgba(0,0,0,0)',
+        }
+
+        if position in _defaults['legend_positions']:
+            legend_kwargs.update(_defaults['legend_positions'][position])
+
+        self.fig.update_layout(legend=legend_kwargs)
 
     def _update_x_range(self, x: Any) -> None:
-        """Update tracked x-axis range for unified spikeline."""
+        """Update tracked x-axis range."""
         try:
             if hasattr(x, '__len__') and len(x) > 0:
                 x_min, x_max = min(x), max(x)
@@ -646,25 +496,18 @@ class EconChart:
             pass
 
     def _apply_unified_spikeline(self) -> None:
-        """
-        Apply spike lines that span all subplots.
-
-        This is a workaround for Plotly 4.0+ where make_subplots creates separate
-        x-axes, preventing spike lines from spanning all subplots.
-        See: https://github.com/plotly/plotly.py/issues/1677
-        """
-        bottom_xaxis = f'x{self.num_rows}'
+        """Apply spike lines that span all charts."""
+        num_rows = len(self.charts)
+        bottom_xaxis = f'x{num_rows}'
 
         # Bind all traces to the bottom x-axis
         self.fig.update_traces(xaxis=bottom_xaxis)
 
         # Add invisible traces to upper axes to force tick label rendering
-        # These must be bound to the bottom x-axis (like all other traces) so that
-        # shapes with xref=bottom_xaxis and yref=y/y2 domain render correctly
         if self._x_range is not None:
             invisible_marker = dict(opacity=0)
             x_range_list = list(self._x_range)
-            for row in range(1, self.num_rows):
+            for row in range(1, num_rows):
                 axis_suffix = str(row) if row > 1 else ''
                 self.fig.add_trace(go.Scatter(
                     x=x_range_list,
@@ -677,27 +520,69 @@ class EconChart:
                     yaxis=f'y{axis_suffix}',
                 ))
 
-            # Explicitly constrain the bottom x-axis range to the data range.
-            # This prevents Plotly's autorange from adding excessive padding when
-            # multiple traces with different point densities share the same axis.
-            # The range is set on all x-axes (will propagate via matches).
+            # Constrain x-axis range
             self.fig.update_xaxes(range=x_range_list)
 
         # Sync upper x-axes to bottom x-axis
-        for row in range(1, self.num_rows):
+        for row in range(1, num_rows):
             self.fig.update_xaxes(row=row, col=1, matches=bottom_xaxis)
 
-        # Apply spike settings to all x-axes
+        # Apply spike settings
+        crosshair_config = _defaults.get('crosshair', {})
         self.fig.update_xaxes(
             showspikes=True,
             spikemode='across',
             spikesnap='cursor',
-            spikecolor=self._colors['spike'],
-            spikethickness=EconChart._defaults['spike']['thickness'],
-            spikedash=EconChart._defaults['spike']['dash'],
+            spikecolor=resolve_color(self.crosshair_color),
+            spikethickness=crosshair_config.get('thickness') or _defaults['spike']['thickness'],
+            spikedash=crosshair_config.get('dash') or _defaults['spike']['dash'],
         )
+
+    def _apply_recession_shading(self) -> None:
+        """Apply recession shading to all charts."""
+        fill_color = resolve_color(self.recession_color)
+        fill_opacity = self.recession_opacity
+
+        recession_periods = NBER_RECESSIONS
+
+        # Filter recessions to the current x-axis range
+        if self._x_range is not None:
+            try:
+                start_dt = self._x_range[0]
+                end_dt = self._x_range[1]
+                if hasattr(start_dt, 'to_pydatetime'):
+                    start_dt = start_dt.to_pydatetime()
+                if hasattr(end_dt, 'to_pydatetime'):
+                    end_dt = end_dt.to_pydatetime()
+                recession_periods = get_recessions_in_range(start_dt, end_dt, recession_periods)
+            except (TypeError, AttributeError):
+                return
+
+        # Add recession shading to all rows
+        num_rows = len(self.charts)
+        for rec_start, rec_end in recession_periods:
+            for row in range(1, num_rows + 1):
+                self.fig.add_vrect(
+                    x0=rec_start,
+                    x1=rec_end,
+                    fillcolor=fill_color,
+                    opacity=fill_opacity,
+                    layer='below',
+                    line_width=0,
+                    row=row,
+                    col=1,
+                    exclude_empty_subplots=False,
+                )
+
+    def show(self) -> None:
+        """Display the chart."""
+        self.build().show()
+
+    def to_html(self, path: str, include_plotlyjs: bool | str = True) -> None:
+        """Export chart to HTML file."""
+        self.build().write_html(path, include_plotlyjs=include_plotlyjs)
 
 
 # Backward compatibility aliases
-PALETTE = EconChart.palette
-DEFAULT_COLORS = EconChart._defaults['colors'].copy()
+PALETTE = palette
+DEFAULT_COLORS = _defaults['colors'].copy()

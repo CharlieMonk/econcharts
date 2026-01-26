@@ -1,10 +1,18 @@
-"""econcharts - Reusable economic chart class with dark theme support.
+"""econcharts - Reusable economic chart classes with dark theme support.
 
 Usage:
-    from econcharts import EconChart
-    chart = EconChart(num_rows=1, height=400)
-    chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
-    chart.show()
+    from econcharts import EconBoard, EconChart, Data
+
+    # Single chart
+    chart = EconChart(Data(x=dates, y=values, name='GDP'), title='GDP Growth')
+    board = EconBoard(chart)
+    board.show()
+
+    # Multiple charts
+    gdp = EconChart(Data(x=dates, y=gdp_values, name='GDP'), title='GDP')
+    inflation = EconChart(Data(x=dates, y=cpi_values, name='CPI'), title='Inflation')
+    board = EconBoard(gdp, inflation, crosshair=True)
+    board.show()
 
     # FRED data utilities
     from econcharts.fred import fetch_gdp, fetch_unemployment
@@ -13,11 +21,7 @@ Usage:
     from econcharts.recessions import NBER_RECESSIONS
 """
 
-from .chart import EconChart, DEFAULT_COLORS, PALETTE
+from .chart import EconBoard, EconChart, Data, DEFAULT_COLORS, PALETTE, palette, resolve_color
 
-# Make PALETTE and DEFAULT_COLORS accessible as class attributes
-EconChart.PALETTE = PALETTE
-EconChart.DEFAULT_COLORS = DEFAULT_COLORS
-
-# Export main class and constants
-__all__ = ['EconChart', 'DEFAULT_COLORS', 'PALETTE']
+# Export main classes and utilities
+__all__ = ['EconBoard', 'EconChart', 'Data', 'DEFAULT_COLORS', 'PALETTE', 'palette', 'resolve_color']

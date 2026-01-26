@@ -2,6 +2,7 @@
 
 Classes:
     Data: A data series for a chart (x, y, name, styling options)
+    EconBase: Base class for EconChart and EconBoard with common functionality
     EconChart: A single chart with data and axis configuration
     EconBoard: Multiple charts displayed together in a vertical stack
 """
@@ -9,6 +10,7 @@ Classes:
 from __future__ import annotations
 
 import os
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Sequence
@@ -59,6 +61,65 @@ def resolve_color(color: str) -> str:
     return palette.get(color.lower(), color)
 
 
+class EconBase(ABC):
+    """Base class for economic chart components.
+
+    Provides common functionality for EconChart and EconBoard:
+    - Color palette access and resolution
+    - Display methods (show, to_html)
+    - Abstract build method for Plotly figure generation
+    """
+
+    # Class-level access to color palette
+    palette = palette
+
+    # Common attributes
+    title: str | None
+
+    @staticmethod
+    def resolve_color(color: str) -> str:
+        """Resolve a color name to its hex value.
+
+        Args:
+            color: Either a hex/rgb color string or a named color
+                   from the palette (e.g., 'teal', 'coral')
+
+        Returns:
+            Hex or rgb color string
+        """
+        return resolve_color(color)
+
+    @abstractmethod
+    def build(self, **kwargs) -> go.Figure:
+        """Build and return the Plotly figure.
+
+        Args:
+            **kwargs: Subclass-specific arguments
+
+        Returns:
+            Plotly Figure object
+        """
+        pass
+
+    def show(self, **kwargs) -> None:
+        """Display the chart in a browser or Jupyter notebook.
+
+        Args:
+            **kwargs: Arguments passed to build()
+        """
+        self.build(**kwargs).show()
+
+    def to_html(self, path: str, include_plotlyjs: bool | str = True, **kwargs) -> None:
+        """Export chart to HTML file.
+
+        Args:
+            path: Output file path
+            include_plotlyjs: Whether to include Plotly JS library
+            **kwargs: Arguments passed to build()
+        """
+        self.build(**kwargs).write_html(path, include_plotlyjs=include_plotlyjs)
+
+
 @dataclass
 class Data:
     """A data series for a chart.
@@ -87,7 +148,7 @@ class Data:
     show_in_legend: bool = True
 
 
-class EconChart:
+class EconChart(EconBase):
     """A single chart with data and axis configuration.
 
     Args:
@@ -111,6 +172,7 @@ class EconChart:
             y_label='% YoY',
             horizontal_line=0,
         )
+        chart.show()  # Display directly
     """
 
     def __init__(
@@ -164,29 +226,14 @@ class EconChart:
 
         Args:
             **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
+
+        Returns:
+            Plotly Figure object
         """
         return EconBoard(self, **board_kwargs).build()
 
-    def show(self, **board_kwargs) -> None:
-        """Display the chart.
 
-        Args:
-            **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
-        """
-        EconBoard(self, **board_kwargs).show()
-
-    def to_html(self, path: str, include_plotlyjs: bool | str = True, **board_kwargs) -> None:
-        """Export chart to HTML file.
-
-        Args:
-            path: Output file path
-            include_plotlyjs: Whether to include Plotly JS
-            **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
-        """
-        EconBoard(self, **board_kwargs).to_html(path, include_plotlyjs=include_plotlyjs)
-
-
-class EconBoard:
+class EconBoard(EconBase):
     """Multiple charts displayed together in a vertical stack.
 
     Args:
@@ -201,7 +248,7 @@ class EconBoard:
         margin_bottom: Bottom margin in pixels. Default: 35 from defaults.yaml
         margin_left: Left margin in pixels. Default: 55 from defaults.yaml
         margin_right: Right margin in pixels. Default: 55 from defaults.yaml
-        crosshair: Show vertical line on hover. Default: False
+        crosshair: Show vertical line on hover. Default: True from defaults.yaml
         crosshair_color: Crosshair color. Default from defaults.yaml: colors.crosshair
         show_recessions: Shade recession periods. Default: True
         recession_color: Recession shading color. Default: 'gray' from defaults.yaml
@@ -211,12 +258,9 @@ class EconBoard:
     Example:
         gdp = EconChart(Data(x=dates, y=gdp_values, name='GDP'), title="GDP")
         inflation = EconChart(Data(x=dates, y=cpi_values, name='CPI'), title="Inflation")
-        board = EconBoard(gdp, inflation, crosshair=True)
+        board = EconBoard(gdp, inflation)
         board.show()
     """
-
-    # Class-level access to palette
-    palette = palette
 
     def __init__(
         self,
@@ -271,11 +315,6 @@ class EconBoard:
         self.fig: go.Figure | None = None
         self._x_range: tuple | None = None
 
-    @staticmethod
-    def resolve_color(color: str) -> str:
-        """Resolve a color name to its hex value."""
-        return resolve_color(color)
-
     def _compute_global_x_range(self) -> tuple | None:
         """Compute x range across all charts."""
         x_min = None
@@ -291,8 +330,15 @@ class EconBoard:
             return (x_min, x_max)
         return None
 
-    def build(self) -> go.Figure:
-        """Build and return the Plotly figure."""
+    def build(self, **kwargs) -> go.Figure:
+        """Build and return the Plotly figure.
+
+        Args:
+            **kwargs: Ignored (accepted for compatibility with EconBase interface)
+
+        Returns:
+            Plotly Figure object
+        """
         num_rows = len(self.charts)
         if num_rows == 0:
             raise ValueError("EconBoard requires at least one EconChart")
@@ -599,11 +645,3 @@ class EconBoard:
                     col=1,
                     exclude_empty_subplots=False,
                 )
-
-    def show(self) -> None:
-        """Display the chart."""
-        self.build().show()
-
-    def to_html(self, path: str, include_plotlyjs: bool | str = True) -> None:
-        """Export chart to HTML file."""
-        self.build().write_html(path, include_plotlyjs=include_plotlyjs)

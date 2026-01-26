@@ -230,6 +230,9 @@ class EconChart(EconBase):
         Returns:
             Plotly Figure object
         """
+        # Pass chart's height to EconBoard unless explicitly overridden
+        if 'height' not in board_kwargs:
+            board_kwargs['height'] = self.height
         return EconBoard(self, **board_kwargs).build()
 
 

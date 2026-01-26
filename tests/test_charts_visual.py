@@ -106,6 +106,49 @@ class TestChartGeneration:
 
             browser.close()
 
+    def test_direct_chart_display(self, html_dir, screenshots_dir):
+        """Test EconChart can be displayed directly without EconBoard."""
+        dates, values = get_gdp_data()
+
+        chart = EconChart(
+            Data(x=dates, y=values, name='GDP Growth', color='teal'),
+            title='Direct Display Test',
+            y_label='% Change YoY',
+            horizontal_line=0,
+        )
+
+        # Test direct to_html without EconBoard
+        html_path = html_dir / "direct_display.html"
+        chart.to_html(str(html_path))
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(f"file://{html_path}")
+            wait_for_plotly_ready(page)
+
+            # Take screenshot
+            page.screenshot(path=str(screenshots_dir / "direct_display.png"))
+
+            # Verify DOM structure
+            plot_div = page.locator('.js-plotly-plot')
+            assert plot_div.count() == 1
+
+            # Verify traces exist
+            traces = page.locator('.scatter')
+            assert traces.count() >= 1
+
+            browser.close()
+
+        # Test direct build() returns a Figure
+        fig = chart.build()
+        assert fig is not None
+        assert len(fig.data) >= 1
+
+        # Test with board_kwargs
+        fig2 = chart.build(height=400, show_recessions=False)
+        assert fig2.layout.height == 400
+
     def test_multi_subplot_chart(self, html_dir, screenshots_dir):
         """Test multi-subplot chart creation."""
         gdp_dates, gdp_values = get_gdp_data()

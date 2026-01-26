@@ -89,6 +89,37 @@ class EconChart:
 | `horizontal_line_color` | str \| None | None | Color for the horizontal line (defaults to zero_line color) |
 | `horizontal_lines` | list[dict] \| None | None | Multiple horizontal lines: `[{'y': 0, 'color': 'gray'}, ...]` |
 
+#### Methods
+
+##### `build(**board_kwargs) -> go.Figure`
+
+Build and return the Plotly figure object.
+
+```python
+fig = chart.build()
+fig = chart.build(height=400, show_recessions=False)
+```
+
+##### `show(**board_kwargs) -> None`
+
+Display the chart in a browser or Jupyter notebook.
+
+```python
+chart.show()
+chart.show(height=400, show_recessions=False)
+```
+
+##### `to_html(path: str, include_plotlyjs: bool | str = True, **board_kwargs) -> None`
+
+Export the chart to an HTML file.
+
+```python
+chart.to_html('chart.html')
+chart.to_html('chart.html', height=400, show_recessions=False)
+```
+
+All methods accept optional `**board_kwargs` that are passed to `EconBoard` (e.g., `height`, `crosshair`, `show_recessions`, `legend`).
+
 #### Example
 
 ```python
@@ -100,6 +131,7 @@ chart = EconChart(
     y_scale='linear',
     horizontal_line=0,
 )
+chart.show()  # Display directly without EconBoard
 ```
 
 ---

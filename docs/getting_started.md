@@ -11,12 +11,11 @@ pip install econcharts
 ## Quick Start
 
 ```python
-from econcharts import EconBoard, EconChart, Data
+from econcharts import EconChart, Data
 
-# Create a chart
+# Create and display a chart
 chart = EconChart(Data(x=dates, y=values, name='GDP'))
-board = EconBoard(chart)
-board.show()
+chart.show()
 ```
 
 ## Progressive Examples
@@ -26,12 +25,11 @@ board.show()
 The minimum required: x values, y values, and a name for the legend.
 
 ```python
-from econcharts import EconBoard, EconChart, Data
+from econcharts import EconChart, Data
 
 # Minimum required: x, y, and name
 chart = EconChart(Data(x=dates, y=values, name='GDP'))
-board = EconBoard(chart)
-board.show()
+chart.show()
 ```
 
 ### Level 2: Add Title and Y-Axis Label
@@ -42,8 +40,7 @@ chart = EconChart(
     title="GDP Growth",
     y_label='% YoY',
 )
-board = EconBoard(chart)
-board.show()
+chart.show()
 ```
 
 ### Level 3: Add Reference Line and Explicit Color
@@ -55,8 +52,7 @@ chart = EconChart(
     y_label='% YoY',
     horizontal_line=0,
 )
-board = EconBoard(chart)
-board.show()
+chart.show()
 ```
 
 ### Level 4: Multiple Data Series (Auto-Colors)
@@ -71,8 +67,7 @@ chart = EconChart(
     title="Economic Indicators",
     y_label='% Change',
 )
-board = EconBoard(chart)
-board.show()
+chart.show()
 ```
 
 ### Level 5: Multiple Charts (Dashboard)
@@ -165,8 +160,7 @@ chart = EconChart(
     y_label='% Change',
     y_scale='linear',
 )
-board = EconBoard(chart, crosshair=True)
-board.show()
+chart.show()
 ```
 
 ### Level 10: Full Configuration
@@ -223,6 +217,7 @@ board.to_html('dashboard.html')
 econcharts includes utilities for fetching economic data from FRED.
 
 ```python
+from econcharts import EconChart, Data
 from econcharts.fred import fetch_gdp, fetch_inflation, fetch_unemployment
 
 # Fetch real data (cached locally)
@@ -230,16 +225,14 @@ gdp_dates, gdp_values = fetch_gdp(start="2000-01-01")
 inf_dates, inf_values = fetch_inflation(start="2000-01-01")
 unemp_dates, unemp_values = fetch_unemployment(start="2000-01-01")
 
-# Create a dashboard
-gdp_chart = EconChart(
+# Create and display a chart
+chart = EconChart(
     Data(x=gdp_dates, y=gdp_values, name='GDP', color='teal'),
     title="GDP Growth",
     y_label='% QoQ',
     horizontal_line=0,
 )
-
-board = EconBoard(gdp_chart, crosshair=True)
-board.show()
+chart.show()
 ```
 
 ## Color Palette
@@ -264,14 +257,22 @@ Available named colors include: `teal`, `coral`, `gold`, `sky`, `violet`, `blue`
 ## Export Options
 
 ```python
-# Display in browser/notebook
-board.show()
+# Display a single chart
+chart.show()
 
 # Export to HTML file
-board.to_html('chart.html')
+chart.to_html('chart.html')
 
 # Get the Plotly figure for further customization
-fig = board.build()
+fig = chart.build()
+
+# Pass board options when displaying a single chart
+chart.show(height=400, show_recessions=False)
+
+# For multiple charts, use EconBoard
+board = EconBoard(chart1, chart2, chart3)
+board.show()
+board.to_html('dashboard.html')
 ```
 
 ## Next Steps

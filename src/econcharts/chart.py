@@ -154,7 +154,7 @@ class EconChart(EconBase):
     Args:
         *data: Data instances to display on this chart
         title: Chart title (displayed above the subplot)
-        height: Relative height in multi-chart layout (default 1.0)
+        height: Figure height in pixels. Default: 600 from defaults.yaml
         y_label: Y-axis label
         y_label_color: Y-axis label color
         y_scale: 'linear' or 'log'
@@ -179,7 +179,7 @@ class EconChart(EconBase):
         self,
         *data: Data,
         title: str | None = None,
-        height: float = 1.0,
+        height: int | None = None,
         y_label: str | None = None,
         y_label_color: str | None = None,
         y_scale: str = 'linear',
@@ -192,7 +192,7 @@ class EconChart(EconBase):
     ) -> None:
         self.data = list(data)
         self.title = title
-        self.height = height
+        self.height = height if height is not None else _defaults['chart']['height']
         self.y_label = y_label
         self.y_label_color = y_label_color
         self.y_scale = y_scale

@@ -48,6 +48,7 @@ spike:
 
 # Crosshair settings (used by EconBoard.crosshair)
 crosshair:
+  showCrosshair: true
   thickness: 1
   dash: "dot"
 

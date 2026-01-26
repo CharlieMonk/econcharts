@@ -205,7 +205,7 @@ class EconBoard:
         margin_bottom: int | None = None,
         margin_left: int | None = None,
         margin_right: int | None = None,
-        crosshair: bool = False,
+        crosshair: bool | None = None,
         crosshair_color: str | None = None,
         show_recessions: bool = True,
         recession_color: str | None = None,
@@ -217,7 +217,7 @@ class EconBoard:
         self.height = height if height is not None else _defaults['chart']['height']
         self.spacing = spacing if spacing is not None else _defaults['chart']['vertical_spacing']
         self.share_x_axis = share_x_axis if share_x_axis is not None else _defaults['chart']['shared_xaxes']
-        self.crosshair = crosshair
+        self.crosshair = crosshair if crosshair is not None else _defaults['crosshair']['showCrosshair']
         self.show_recessions = show_recessions
 
         # Legend settings

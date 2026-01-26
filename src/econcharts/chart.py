@@ -159,6 +159,32 @@ class EconChart:
             return (x_min, x_max)
         return None
 
+    def build(self, **board_kwargs) -> go.Figure:
+        """Build and return the Plotly figure.
+
+        Args:
+            **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
+        """
+        return EconBoard(self, **board_kwargs).build()
+
+    def show(self, **board_kwargs) -> None:
+        """Display the chart.
+
+        Args:
+            **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
+        """
+        EconBoard(self, **board_kwargs).show()
+
+    def to_html(self, path: str, include_plotlyjs: bool | str = True, **board_kwargs) -> None:
+        """Export chart to HTML file.
+
+        Args:
+            path: Output file path
+            include_plotlyjs: Whether to include Plotly JS
+            **board_kwargs: Optional arguments passed to EconBoard (e.g., height, crosshair)
+        """
+        EconBoard(self, **board_kwargs).to_html(path, include_plotlyjs=include_plotlyjs)
+
 
 class EconBoard:
     """Multiple charts displayed together in a vertical stack.

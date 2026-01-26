@@ -21,7 +21,6 @@ Usage:
     from econcharts.recessions import NBER_RECESSIONS
 """
 
-from .chart import EconBoard, EconChart, Data, DEFAULT_COLORS, PALETTE, palette, resolve_color
+from .chart import EconBoard, EconChart, Data, palette, resolve_color
 
-# Export main classes and utilities
-__all__ = ['EconBoard', 'EconChart', 'Data', 'DEFAULT_COLORS', 'PALETTE', 'palette', 'resolve_color']
+__all__ = ['EconBoard', 'EconChart', 'Data', 'palette', 'resolve_color']

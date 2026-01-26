@@ -581,8 +581,3 @@ class EconBoard:
     def to_html(self, path: str, include_plotlyjs: bool | str = True) -> None:
         """Export chart to HTML file."""
         self.build().write_html(path, include_plotlyjs=include_plotlyjs)
-
-
-# Backward compatibility aliases
-PALETTE = palette
-DEFAULT_COLORS = _defaults['colors'].copy()

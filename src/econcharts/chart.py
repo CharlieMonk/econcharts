@@ -33,10 +33,10 @@ def _load_yaml(filename: str) -> dict:
 
 # Load YAML configuration as module-level variables
 _defaults = _load_yaml('defaults.yaml')
-palette = _load_yaml('colors.yaml')
+_palette = _load_yaml('colors.yaml')
 
 # Create sorted color list for auto-assignment
-_sorted_colors = sorted(palette.keys())
+_sorted_colors = sorted(_palette.keys())
 
 
 def resolve_color(color: str) -> str:
@@ -58,7 +58,7 @@ def resolve_color(color: str) -> str:
     """
     if color.startswith(('#', 'rgb')):
         return color
-    return palette.get(color.lower(), color)
+    return _palette.get(color.lower(), color)
 
 
 class EconBase(ABC):
@@ -71,7 +71,7 @@ class EconBase(ABC):
     """
 
     # Class-level access to color palette
-    palette = palette
+    _palette = _palette
 
     # Common attributes
     title: str | None
@@ -192,7 +192,7 @@ class EconChart(EconBase):
     ) -> None:
         self.data = list(data)
         self.title = title
-        self.height = height if height is not None else _defaults['chart']['height']
+        self.height = height if height is not None else _defaults['chart']['single_chart_height']
         self.y_label = y_label
         self.y_label_color = y_label_color
         self.y_scale = y_scale
@@ -287,7 +287,7 @@ class EconBoard(EconBase):
     ) -> None:
         self.charts = list(charts)
         self.title = title
-        self.height = height if height is not None else _defaults['chart']['height']
+        self.height = height or (_defaults['chart']['board_height_per_plot'] * len(self.charts)) if len(self.charts) > 1 else _defaults['chart']['single_chart_height']
         self.spacing = spacing if spacing is not None else _defaults['chart']['vertical_spacing']
         self.share_x_axis = share_x_axis if share_x_axis is not None else _defaults['chart']['shared_xaxes']
         self.crosshair = crosshair if crosshair is not None else _defaults['crosshair']['showCrosshair']

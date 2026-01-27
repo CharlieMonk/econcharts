@@ -13,7 +13,8 @@ colors:
 
 # Chart dimensions
 chart:
-  height: 600
+  single_chart_height: 300
+  board_height_per_plot: 200
   vertical_spacing: 0.05
   shared_xaxes: true
 

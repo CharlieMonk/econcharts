@@ -82,7 +82,7 @@ class TestChartGeneration:
             y_label='% Change YoY',
             horizontal_line=0,
         )
-        board = EconBoard(chart, crosshair=True)
+        board = EconBoard(chart)
 
         html_path = html_dir / "single_subplot.html"
         board.to_html(str(html_path))
@@ -177,7 +177,6 @@ class TestChartGeneration:
             unemployment_chart,
             height=700,
             legend='top',
-            crosshair=True,
         )
 
         html_path = html_dir / "multi_subplot.html"
@@ -210,7 +209,7 @@ class TestChartGeneration:
             y_label='Price ($)',
             y_scale='log',
         )
-        board = EconBoard(chart, height=400, crosshair=True)
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "log_scale.html"
         board.to_html(str(html_path))
@@ -315,7 +314,7 @@ class TestHoverTooltips:
             Data(x=dates, y=values, name='Test Data', color='teal'),
             title='Hover Test',
         )
-        board = EconBoard(chart, height=400, crosshair=True)
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "hover_test.html"
         board.to_html(str(html_path))
@@ -722,8 +721,8 @@ class TestRecessionShading:
             title='Unemployment with Recession Shading',
             y_label='%',
         )
-        # Recession shading is now enabled by default
-        board = EconBoard(chart, height=400, crosshair=True)
+        # Recession shading and crosshair are enabled by default
+        board = EconBoard(chart, height=400)
 
         html_path = html_dir / "recession_basic.html"
         board.to_html(str(html_path))
@@ -881,11 +880,10 @@ class TestRecessionShading:
             horizontal_line=2.0,
         )
 
-        # Recession shading is enabled by default and applies to all rows
+        # Recession shading and crosshair are enabled by default
         board = EconBoard(
             gdp_chart, unemployment_chart, inflation_chart,
             height=700,
-            crosshair=True,
         )
 
         html_path = html_dir / "recession_multi_subplot.html"

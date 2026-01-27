@@ -59,7 +59,7 @@ class EconChart:
         self,
         *data: Data,                        # Pass Data instances directly
         title: str | None = None,           # Chart title
-        height: float = 1.0,                # Relative height in multi-chart layout
+        height: int | None = None,          # Figure height in pixels (default: 300)
         y_label: str | None = None,         # Y-axis label
         y_label_color: str | None = None,   # Y-axis label color
         y_scale: str = 'linear',            # 'linear' or 'log'
@@ -78,7 +78,7 @@ class EconChart:
 |-----------|------|---------|-------------|
 | `*data` | Data | (required) | One or more Data instances to display |
 | `title` | str \| None | None | Chart title displayed above the subplot |
-| `height` | float | 1.0 | Relative height in multi-chart layout (e.g., 2.0 = twice as tall) |
+| `height` | int \| None | 300 | Figure height in pixels (from defaults.yaml) |
 | `y_label` | str \| None | None | Y-axis label |
 | `y_label_color` | str \| None | None | Y-axis label color (defaults to text color) |
 | `y_scale` | str | 'linear' | Y-axis scale: 'linear' or 'log' |
@@ -146,7 +146,7 @@ class EconBoard:
         self,
         *charts: EconChart,                 # Pass charts directly
         title: str | None = None,           # Overall title
-        height: int | None = None,          # Default: 600
+        height: int | None = None,          # Default: 200px per chart
         spacing: float | None = None,       # Default: 0.05
         share_x_axis: bool | None = None,   # Default: True
         legend: str | None = None,          # 'top', 'bottom', or 'right'
@@ -155,7 +155,7 @@ class EconBoard:
         margin_bottom: int | None = None,   # Default: 35
         margin_left: int | None = None,     # Default: 55
         margin_right: int | None = None,    # Default: 55
-        crosshair: bool = False,            # Show vertical line on hover
+        crosshair: bool | None = None,      # Default: True (show vertical line on hover)
         crosshair_color: str | None = None, # Crosshair color
         show_recessions: bool = True,       # Shade recession periods
         recession_color: str | None = None, # Default: 'gray'
@@ -170,7 +170,7 @@ class EconBoard:
 |-----------|------|---------|--------|
 | `*charts` | EconChart | (required) | One or more EconChart instances |
 | `title` | str \| None | None | Overall title for the dashboard |
-| `height` | int | 600 | Total figure height in pixels |
+| `height` | int | 200 * num_charts | Total figure height in pixels (200px per chart) |
 | `spacing` | float | 0.05 | Vertical spacing between charts (0-1) |
 | `share_x_axis` | bool | True | Synchronize x-axis zoom across charts |
 | `legend` | str | 'bottom' | Legend position: 'top', 'bottom', or 'right' |
@@ -179,7 +179,7 @@ class EconBoard:
 | `margin_bottom` | int | 35 | Bottom margin in pixels |
 | `margin_left` | int | 55 | Left margin in pixels |
 | `margin_right` | int | 55 | Right margin in pixels |
-| `crosshair` | bool | False | Show vertical crosshair line on hover |
+| `crosshair` | bool | True | Show vertical crosshair line on hover |
 | `crosshair_color` | str | 'rgba(255,255,255,0.5)' | Crosshair line color |
 | `show_recessions` | bool | True | Show NBER recession shading |
 | `recession_color` | str | 'gray' | Recession shading color |
@@ -329,7 +329,8 @@ All defaults can be customized via `defaults.yaml`:
 |---------|---------|-----------|
 | Line width | 1.5 | `line.width` |
 | Marker size | 6 | `scatter.marker_size` |
-| Chart height | 600 | `chart.height` |
+| Single chart height | 300 | `chart.single_chart_height` |
+| Board height per chart | 200 | `chart.board_height_per_plot` |
 | Vertical spacing | 0.05 | `chart.vertical_spacing` |
 | Shared x-axes | True | `chart.shared_xaxes` |
 | Legend position | 'bottom' | `legend.position` |

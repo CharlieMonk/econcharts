@@ -99,14 +99,13 @@ board = EconBoard(gdp, inflation, unemployment)
 board.show()
 ```
 
-### Level 6: Crosshair and Legend Position
+### Level 6: Legend Position
 
-Enable the crosshair for synchronized hover across charts.
+Crosshair is enabled by default. Customize the legend position.
 
 ```python
 board = EconBoard(
     gdp, inflation, unemployment,
-    crosshair=True,
     legend='bottom',
     legend_orientation='horizontal',
 )
@@ -115,14 +114,12 @@ board.show()
 
 ### Level 7: Recession Shading and Custom Height
 
-Recession shading is enabled by default using NBER recession dates.
+Recession shading is enabled by default using NBER recession dates. Customize the appearance.
 
 ```python
 board = EconBoard(
     gdp, inflation, unemployment,
     height=800,
-    crosshair=True,
-    show_recessions=True,
     recession_color='gray',
     recession_opacity=0.2,
 )
@@ -140,8 +137,6 @@ board = EconBoard(
     spacing=0.08,
     margin_top=80,
     margin_bottom=50,
-    crosshair=True,
-    show_recessions=True,
 )
 board.show()
 ```
@@ -202,9 +197,7 @@ board = EconBoard(
     margin_bottom=40,
     margin_left=60,
     margin_right=60,
-    crosshair=True,
     crosshair_color='white',
-    show_recessions=True,
     recession_color='gray',
     recession_opacity=0.15,
 )

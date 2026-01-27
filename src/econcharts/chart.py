@@ -287,7 +287,7 @@ class EconBoard(EconBase):
     ) -> None:
         self.charts = list(charts)
         self.title = title
-        self.height = height or (_defaults['chart']['board_height_per_plot'] * len(self.charts)) if len(self.charts) > 1 else _defaults['chart']['single_chart_height']
+        self._initialize_height(height)
         self.spacing = spacing if spacing is not None else _defaults['chart']['vertical_spacing']
         self.share_x_axis = share_x_axis if share_x_axis is not None else _defaults['chart']['shared_xaxes']
         self.crosshair = crosshair if crosshair is not None else _defaults['crosshair']['showCrosshair']
@@ -317,6 +317,15 @@ class EconBoard(EconBase):
         # Figure will be created in build()
         self.fig: go.Figure | None = None
         self._x_range: tuple | None = None
+
+    def _initialize_height(self, height: int | None) -> None:
+        """Set the figure height based on user input and number of charts."""
+        if height is not None:
+            self.height = height
+        elif len(self.charts) > 1:
+            self.height = _defaults['chart']['board_height_per_plot'] * len(self.charts)
+        else:
+            self.height = _defaults['chart']['single_chart_height']
 
     def _compute_global_x_range(self) -> tuple | None:
         """Compute x range across all charts."""

@@ -161,6 +161,17 @@ EconChart(
     x_range=(start, end),       # Constrain x-axis range
     horizontal_line=0,          # Reference line y-value
     horizontal_line_color='gray', # Reference line color
+    # Display options (passed to EconBoard when shown)
+    legend='bottom',            # 'top', 'bottom', or 'right'
+    legend_orientation='horizontal', # 'horizontal' or 'vertical'
+    margin_top=55,              # Top margin in pixels
+    margin_bottom=35,           # Bottom margin in pixels
+    margin_left=55,             # Left margin in pixels
+    margin_right=55,            # Right margin in pixels
+    show_recessions=True,       # Show NBER recession shading
+    recession_color='gray',     # Recession shading color
+    recession_opacity=0.15,     # Recession shading opacity
+    colors={...},               # Custom theme colors
 )
 ```
 

@@ -164,6 +164,16 @@ class EconChart(EconBase):
         horizontal_line: Y-value for a horizontal reference line
         horizontal_line_color: Color for the horizontal line
         horizontal_lines: Multiple lines: [{y, color}, ...]
+        legend: Legend position: 'top', 'bottom', or 'right'. Default: 'bottom'
+        legend_orientation: 'horizontal' or 'vertical'. Default: 'horizontal'
+        margin_top: Top margin in pixels. Default: 55
+        margin_bottom: Bottom margin in pixels. Default: 35
+        margin_left: Left margin in pixels. Default: 55
+        margin_right: Right margin in pixels. Default: 55
+        show_recessions: Shade recession periods. Default: True
+        recession_color: Recession shading color. Default: 'gray'
+        recession_opacity: Recession shading opacity. Default: 0.15
+        colors: Custom color theme dict
 
     Example:
         chart = EconChart(
@@ -171,6 +181,7 @@ class EconChart(EconBase):
             title="GDP Growth",
             y_label='% YoY',
             horizontal_line=0,
+            show_recessions=False,
         )
         chart.show()  # Display directly
     """
@@ -189,6 +200,16 @@ class EconChart(EconBase):
         horizontal_line: float | None = None,
         horizontal_line_color: str | None = None,
         horizontal_lines: list[dict] | None = None,
+        legend: str | None = None,
+        legend_orientation: str | None = None,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        show_recessions: bool | None = None,
+        recession_color: str | None = None,
+        recession_opacity: float | None = None,
+        colors: dict[str, str] | None = None,
     ) -> None:
         self.data = list(data)
         self.title = title
@@ -202,6 +223,17 @@ class EconChart(EconBase):
         self.horizontal_line = horizontal_line
         self.horizontal_line_color = horizontal_line_color
         self.horizontal_lines = horizontal_lines or []
+        # Board display options
+        self.legend = legend
+        self.legend_orientation = legend_orientation
+        self.margin_top = margin_top
+        self.margin_bottom = margin_bottom
+        self.margin_left = margin_left
+        self.margin_right = margin_right
+        self.show_recessions = show_recessions
+        self.recession_color = recession_color
+        self.recession_opacity = recession_opacity
+        self.colors = colors
 
     def _compute_x_range(self) -> tuple | None:
         """Compute the x range from all data series."""
@@ -230,9 +262,29 @@ class EconChart(EconBase):
         Returns:
             Plotly Figure object
         """
-        # Pass chart's height to EconBoard unless explicitly overridden
+        # Pass chart's stored board options to EconBoard unless explicitly overridden
         if 'height' not in board_kwargs:
             board_kwargs['height'] = self.height
+        if 'legend' not in board_kwargs and self.legend is not None:
+            board_kwargs['legend'] = self.legend
+        if 'legend_orientation' not in board_kwargs and self.legend_orientation is not None:
+            board_kwargs['legend_orientation'] = self.legend_orientation
+        if 'margin_top' not in board_kwargs and self.margin_top is not None:
+            board_kwargs['margin_top'] = self.margin_top
+        if 'margin_bottom' not in board_kwargs and self.margin_bottom is not None:
+            board_kwargs['margin_bottom'] = self.margin_bottom
+        if 'margin_left' not in board_kwargs and self.margin_left is not None:
+            board_kwargs['margin_left'] = self.margin_left
+        if 'margin_right' not in board_kwargs and self.margin_right is not None:
+            board_kwargs['margin_right'] = self.margin_right
+        if 'show_recessions' not in board_kwargs and self.show_recessions is not None:
+            board_kwargs['show_recessions'] = self.show_recessions
+        if 'recession_color' not in board_kwargs and self.recession_color is not None:
+            board_kwargs['recession_color'] = self.recession_color
+        if 'recession_opacity' not in board_kwargs and self.recession_opacity is not None:
+            board_kwargs['recession_opacity'] = self.recession_opacity
+        if 'colors' not in board_kwargs and self.colors is not None:
+            board_kwargs['colors'] = self.colors
         return EconBoard(self, **board_kwargs).build()
 
 

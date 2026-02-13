@@ -69,6 +69,17 @@ class EconChart:
         horizontal_line: float | None = None,       # Y-value for reference line
         horizontal_line_color: str | None = None,   # Reference line color
         horizontal_lines: list[dict] | None = None, # Multiple lines: [{y, color}, ...]
+        # Display options (passed to EconBoard when shown)
+        legend: str | None = None,          # 'top', 'bottom', or 'right'
+        legend_orientation: str | None = None,  # 'horizontal' or 'vertical'
+        margin_top: int | None = None,      # Top margin in pixels
+        margin_bottom: int | None = None,   # Bottom margin in pixels
+        margin_left: int | None = None,     # Left margin in pixels
+        margin_right: int | None = None,    # Right margin in pixels
+        show_recessions: bool | None = None,     # Shade recession periods
+        recession_color: str | None = None,      # Recession shading color
+        recession_opacity: float | None = None,  # Recession shading opacity
+        colors: dict[str, str] | None = None,    # Custom color theme
     ):
 ```
 
@@ -88,6 +99,16 @@ class EconChart:
 | `horizontal_line` | float \| None | None | Y-value for a horizontal reference line |
 | `horizontal_line_color` | str \| None | None | Color for the horizontal line (defaults to zero_line color) |
 | `horizontal_lines` | list[dict] \| None | None | Multiple horizontal lines: `[{'y': 0, 'color': 'gray'}, ...]` |
+| `legend` | str \| None | None | Legend position: 'top', 'bottom', or 'right' (passed to EconBoard) |
+| `legend_orientation` | str \| None | None | Legend orientation: 'horizontal' or 'vertical' (passed to EconBoard) |
+| `margin_top` | int \| None | None | Top margin in pixels (passed to EconBoard) |
+| `margin_bottom` | int \| None | None | Bottom margin in pixels (passed to EconBoard) |
+| `margin_left` | int \| None | None | Left margin in pixels (passed to EconBoard) |
+| `margin_right` | int \| None | None | Right margin in pixels (passed to EconBoard) |
+| `show_recessions` | bool \| None | None | Show NBER recession shading (passed to EconBoard) |
+| `recession_color` | str \| None | None | Recession shading color (passed to EconBoard) |
+| `recession_opacity` | float \| None | None | Recession shading opacity 0-1 (passed to EconBoard) |
+| `colors` | dict \| None | None | Custom theme colors dict (passed to EconBoard) |
 
 #### Methods
 

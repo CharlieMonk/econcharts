@@ -216,15 +216,7 @@ board.to_html('dashboard.html', include_plotlyjs='cdn')  # Smaller file, require
 board.to_html('dashboard.html', include_plotlyjs=False)  # Requires plotly.js loaded separately
 ```
 
-#### Class Attributes
-
-##### `palette`
-
-Access to the 68-color palette dict.
-
-```python
-print(EconBoard.palette['teal'])  # '#00d4aa'
-```
+#### Class Methods
 
 ##### `resolve_color(color: str) -> str`
 
@@ -234,6 +226,8 @@ Resolve a color name to its hex value.
 EconBoard.resolve_color('teal')     # '#00d4aa'
 EconBoard.resolve_color('#ff0000')  # '#ff0000' (unchanged)
 ```
+
+Note: The color palette is also accessible via the module-level `resolve_color` function.
 
 ---
 

@@ -2,4 +2,6 @@ COMPLETE: Add built in recession shading, applied to charts by default. Make it 
 
 Make it unnecessary to pass HTML tags for plotly titles. Have users pass the heading level (1 corresponds to <h1>, 2 to <h2> etc.) as an optional argument. Default to 1 (<h1>) if no argument is passed. 
 
-Split EconChart into Subplot and EconChart classes. EconChart should be a collection of subplots that display together.
+COMPLETE: Split EconChart into Subplot and EconChart classes. EconChart should be a collection of subplots that display together.
+
+Include instance variables in EconBase

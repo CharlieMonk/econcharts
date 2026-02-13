@@ -5,10 +5,11 @@ Sharp, professional charts for economic data with dark theme support.
 ## Features
 
 - **Modern Dark Theme**: Beautiful dark-themed charts optimized for economic and financial data
-- **Multi-subplot Support**: Easily create charts with multiple synchronized subplots
-- **Unified Spike Lines**: Vertical crosshairs that span all subplots for easy data comparison
-- **Named Color Palette**: 68 colors optimized for dark backgrounds
-- **Fluent API**: Chainable methods for intuitive chart building
+- **Multi-subplot Support**: Easily create dashboards with multiple synchronized charts
+- **Unified Crosshairs**: Vertical crosshairs that span all charts for easy data comparison
+- **Recession Shading**: Automatic NBER recession period shading (1948-2020)
+- **Named Color Palette**: 69 colors optimized for dark backgrounds
+- **FRED Integration**: Built-in utilities for fetching Federal Reserve economic data
 - **Interactive**: Built on Plotly with zoom, pan, and hover capabilities
 - **Configurable**: YAML-based default configuration that's easy to customize
 
@@ -21,50 +22,75 @@ pip install econcharts
 ## Quick Start
 
 ```python
-import pandas as pd
-import econcharts
+from econcharts import EconChart, Data
 
-# Sample data
-dates = pd.date_range('2020-01-01', periods=100, freq='D')
-values = [100 + i * 0.5 + (i % 10) for i in range(100)]
-
-# Create a simple chart using named colors
-chart = econcharts(num_rows=1, height=400)
-chart.add_line(row=1, x=dates, y=values, name='GDP Growth', color='teal')
-chart.set_title('Economic Indicator')
-chart.enable_unified_spikeline()
-fig = chart.build()
-fig.show()
+# Create a simple chart
+chart = EconChart(
+    Data(x=dates, y=values, name='GDP', color='teal'),
+    title="GDP Growth",
+    y_label='% YoY',
+    horizontal_line=0,
+)
+chart.show()
 ```
 
-## Multi-subplot Example
+## Multi-Chart Dashboard
 
 ```python
-import econcharts
+from econcharts import EconBoard, EconChart, Data
 
-chart = econcharts(
-    num_rows=3,
-    subplot_titles=('GDP', 'Inflation', 'Unemployment'),
-    height=700,
+# Create individual charts
+gdp = EconChart(
+    Data(x=dates, y=gdp_values, name='GDP', color='teal'),
+    title="GDP Growth",
+    y_label='% YoY',
+    horizontal_line=0,
 )
 
-# Add data to each subplot using named colors
-chart.add_line(row=1, x=dates, y=gdp_data, name='GDP', color='teal')
-chart.add_line(row=2, x=dates, y=inflation_data, name='Inflation', color='coral')
-chart.add_line(row=3, x=dates, y=unemployment_data, name='Unemployment', color='sky')
+inflation = EconChart(
+    Data(x=dates, y=cpi_values, name='Inflation', color='coral'),
+    title="Inflation Rate",
+    y_label='% YoY',
+    horizontal_line=2,  # 2% target
+)
 
-# Add reference lines
-chart.add_hline(row=2, y=2.0)  # 2% inflation target
+unemployment = EconChart(
+    Data(x=dates, y=unemp_values, name='Unemployment', color='gold'),
+    title="Unemployment Rate",
+    y_label='%',
+)
 
-# Configure appearance
-chart.set_yaxis(row=1, title='Billions USD')
-chart.set_yaxis(row=2, title='% YoY')
-chart.set_yaxis(row=3, title='% Rate')
-chart.set_legend(orientation='h', position='top')
-chart.enable_unified_spikeline()
+# Combine into a dashboard
+board = EconBoard(
+    gdp, inflation, unemployment,
+    height=700,
+    crosshair=True,      # Enabled by default
+    show_recessions=True, # Enabled by default
+)
+board.show()
+```
 
-fig = chart.build()
-fig.show()
+## Using FRED Data
+
+```python
+from econcharts import EconBoard, EconChart, Data
+from econcharts.fred import fetch_gdp, fetch_inflation, fetch_unemployment
+
+# Fetch real economic data (cached locally)
+gdp_dates, gdp_values = fetch_gdp(start="2000-01-01")
+inf_dates, inf_values = fetch_inflation(start="2000-01-01")
+unemp_dates, unemp_values = fetch_unemployment(start="2000-01-01")
+
+# Create dashboard with real data
+gdp = EconChart(
+    Data(x=gdp_dates, y=gdp_values, name='GDP', color='teal'),
+    title="GDP Growth",
+    y_label='% QoQ',
+    horizontal_line=0,
+)
+
+board = EconBoard(gdp)
+board.show()
 ```
 
 ## Named Color Palette
@@ -72,91 +98,144 @@ fig.show()
 Use color names instead of hex codes for cleaner, more readable code:
 
 ```python
-import econcharts
+from econcharts import EconChart, Data
 
-# Available colors (68 total, optimized for dark theme):
+# Available colors (69 total, optimized for dark theme):
 # Primary:     teal, coral, gold, sky, violet, blue, orange, pink
 # Secondary:   mint, salmon, lavender, peach, cyan, lime, rose, amber
 # Neutral:     slate, silver, steel, gray
 # Accent:      white, red, green, yellow, purple
-# Finance:     bull, bear, neutral, dollar
+# Finance:     bull, bear, neutral, dollar, recession
 # Bright:      electric, neon, emerald, amethyst, tangerine, apricot, golden, orchid
 # Plotly:      plotly_blue, plotly_red, plotly_teal, plotly_purple, plotly_orange,
 #              plotly_cyan, plotly_pink, plotly_lime, plotly_magenta, plotly_yellow
 # Colorscales: plasma_*, piyg_* (for diverging data)
 
-# Use in charts
-chart = econcharts(num_rows=1, height=400)
-chart.add_line(row=1, x=dates, y=values, name='GDP', color='teal')
+# Use named colors
+chart = EconChart(
+    Data(x=dates, y=values, name='GDP', color='teal'),
+    Data(x=dates, y=values2, name='Forecast', color='coral', line_style='dashed'),
+)
 
-# Hex codes still work
-chart.add_line(row=1, x=dates, y=values2, name='Custom', color='#ff00ff')
-
-# View all 68 colors
-print(econcharts.PALETTE)  # {'teal': '#00d4aa', 'coral': '#ff6b6b', ...}
+# Hex codes and RGB also work
+chart = EconChart(
+    Data(x=dates, y=values, name='Custom', color='#ff00ff'),
+    Data(x=dates, y=values2, name='RGB', color='rgb(255, 107, 107)'),
+)
 ```
 
 ## API Reference
 
-### econcharts
+### Data
 
-The main chart class with fluent interface for building economic charts.
-
-#### Constructor
+A data series for a chart.
 
 ```python
-import econcharts
-
-chart = econcharts(
-    num_rows: int,                          # Number of subplot rows
-    row_heights: list[float] | None = None, # Relative heights for each row
-    subplot_titles: tuple[str, ...] | None = None,
-    colors: dict[str, str] | None = None,   # Custom color scheme
-    shared_xaxes: bool = True,              # Share x-axes across subplots
-    vertical_spacing: float = 0.05,         # Spacing between subplots
-    height: int = 600,                      # Chart height in pixels
+Data(
+    x=dates,                    # X-axis values (required)
+    y=values,                   # Y-axis values (required)
+    name='GDP',                 # Legend label (required)
+    color='teal',               # Color (optional, auto-assigned if omitted)
+    style='line',               # 'line' or 'scatter'
+    line_width=1.5,             # Line width
+    line_style='dashed',        # 'solid', 'dashed', 'dotted', 'dashdot'
+    marker_size=6,              # Marker size for scatter
+    visible=True,               # Show/hide trace
+    show_in_legend=True,        # Include in legend
 )
 ```
 
-#### Methods
+### EconChart
 
-- `add_line(row, x, y, name, color, ...)` - Add a line trace
-- `add_scatter(row, x, y, name, color, ...)` - Add a scatter (markers) trace
-- `set_yaxis(row, title, scale_type, ...)` - Configure y-axis
-- `set_xaxis(row, title, tick_format, ...)` - Configure x-axis
-- `add_hline(row, y, color, ...)` - Add horizontal reference line
-- `enable_unified_spikeline(spike_color)` - Enable cross-subplot spike lines
-- `set_legend(orientation, position)` - Configure legend
-- `set_margins(top, left, right, bottom)` - Set margins
-- `set_title(text, font_size)` - Set chart title
-- `build()` - Finalize and return Plotly figure
-- `show()` - Display the chart
-- `to_html(path, include_plotlyjs)` - Export to HTML
+A single chart with data and axis configuration.
 
-#### Class Attributes
+```python
+EconChart(
+    *data,                      # One or more Data instances
+    title='GDP Growth',         # Chart title
+    height=300,                 # Height in pixels
+    y_label='% YoY',            # Y-axis label
+    y_scale='linear',           # 'linear' or 'log'
+    x_label='Date',             # X-axis label
+    x_tick_format='%Y',         # Tick format (e.g., '%b %Y')
+    x_range=(start, end),       # Constrain x-axis range
+    horizontal_line=0,          # Reference line y-value
+    horizontal_line_color='gray', # Reference line color
+)
+```
 
-- `econcharts.PALETTE` - Dictionary of 68 named colors
-- `econcharts.DEFAULT_COLORS` - Default theme colors
-- `econcharts.resolve_color(name)` - Convert color name to hex
+**Methods:**
+- `show(**board_kwargs)` - Display the chart
+- `build(**board_kwargs)` - Return Plotly figure
+- `to_html(path, **board_kwargs)` - Export to HTML
+
+### EconBoard
+
+Multiple charts displayed together in a vertical stack.
+
+```python
+EconBoard(
+    *charts,                    # One or more EconChart instances
+    title='Dashboard',          # Overall title
+    height=700,                 # Total height (default: 200px per chart)
+    spacing=0.05,               # Vertical spacing between charts
+    share_x_axis=True,          # Sync x-axis zoom
+    legend='bottom',            # 'top', 'bottom', or 'right'
+    legend_orientation='horizontal', # 'horizontal' or 'vertical'
+    crosshair=True,             # Show vertical crosshair on hover
+    crosshair_color='white',    # Crosshair color
+    show_recessions=True,       # Show NBER recession shading
+    recession_color='gray',     # Recession shading color
+    recession_opacity=0.15,     # Recession shading opacity
+    margin_top=55,              # Margins in pixels
+    margin_bottom=35,
+    margin_left=55,
+    margin_right=55,
+    colors={...},               # Custom theme colors
+)
+```
+
+**Methods:**
+- `show()` - Display the dashboard
+- `build()` - Return Plotly figure
+- `to_html(path)` - Export to HTML
+
+### resolve_color
+
+Convert a color name to its hex value.
+
+```python
+from econcharts import resolve_color
+
+resolve_color('teal')      # '#00d4aa'
+resolve_color('#ff0000')   # '#ff0000' (unchanged)
+```
 
 ## Customization
 
-Default settings are stored in `defaults.yaml` and can be overridden:
+Override default theme colors:
 
 ```python
-import econcharts
+from econcharts import EconBoard, EconChart, Data
 
 custom_colors = {
     'background': '#0a0a0a',
     'paper': '#1a1a1a',
     'grid': '#333333',
     'text': '#ffffff',
-    'spike': 'rgba(255, 255, 255, 0.7)',
+    'crosshair': 'rgba(255, 255, 255, 0.7)',
     'zero_line': 'rgba(255, 255, 255, 0.4)',
 }
 
-chart = econcharts(num_rows=2, colors=custom_colors)
+chart = EconChart(Data(x=dates, y=values, name='Data'))
+board = EconBoard(chart, colors=custom_colors)
+board.show()
 ```
+
+## Documentation
+
+- [Getting Started Guide](docs/getting_started.md) - Progressive examples from minimal to complex
+- [API Reference](docs/api_reference.md) - Complete documentation for all classes and functions
 
 ## License
 

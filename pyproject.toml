@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "econcharts"
-version = "0.1.0"
+version = "0.1.1"
 description = "Sharp, professional charts for economic data with dark theme"
 readme = "README.md"
 license = "MIT"

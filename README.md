@@ -232,10 +232,24 @@ board = EconBoard(chart, colors=custom_colors)
 board.show()
 ```
 
+## Tutorial: Inflation Analysis Dashboard
+
+Learn how to build a complete inflation analysis dashboard step-by-step. The tutorial covers fetching FRED data, creating charts, building multi-chart dashboards, and calculating derived metrics like real interest rates.
+
+**[View the Tutorial](notebooks/tutorial_inflation_analysis.ipynb)**
+
+Topics covered:
+- Fetching and visualizing CPI inflation data
+- Adding Fed Funds Rate for monetary policy context
+- Building synchronized multi-chart dashboards
+- Historical analysis of 1970s-80s hyperinflation
+- Calculating real interest rates
+
 ## Documentation
 
 - [Getting Started Guide](docs/getting_started.md) - Progressive examples from minimal to complex
 - [API Reference](docs/api_reference.md) - Complete documentation for all classes and functions
+- [Inflation Analysis Tutorial](notebooks/tutorial_inflation_analysis.ipynb) - Step-by-step dashboard tutorial
 
 ## License
 

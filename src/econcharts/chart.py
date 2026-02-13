@@ -154,7 +154,7 @@ class EconChart(EconBase):
     Args:
         *data: Data instances to display on this chart
         title: Chart title (displayed above the subplot)
-        height: Figure height in pixels. Default: 600 from defaults.yaml
+        height: Figure height in pixels. Default: 300 from defaults.yaml
         y_label: Y-axis label
         y_label_color: Y-axis label color
         y_scale: 'linear' or 'log'
@@ -242,7 +242,7 @@ class EconBoard(EconBase):
     Args:
         *charts: EconChart instances to display
         title: Overall title for all charts
-        height: Total figure height in pixels. Default: 600 from defaults.yaml
+        height: Total figure height in pixels. Default: 200px per chart (or 300px for single chart)
         spacing: Vertical spacing between charts. Default: 0.05 from defaults.yaml
         share_x_axis: Sync x-axis zoom across charts. Default: True from defaults.yaml
         legend: Legend position: 'top', 'bottom', or 'right'. Default: 'bottom'

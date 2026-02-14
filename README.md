@@ -47,6 +47,8 @@ chart = EconChart(
 chart.show()
 ```
 
+![Quick Start](docs/images/quick_start.png)
+
 ## Multi-Chart Dashboard
 
 ```python
@@ -83,6 +85,8 @@ board = EconBoard(
 board.show()
 ```
 
+![Multi-Chart Dashboard](docs/images/multi_chart.png)
+
 ## Using FRED Data
 
 ```python
@@ -105,6 +109,8 @@ gdp = EconChart(
 board = EconBoard(gdp)
 board.show()
 ```
+
+![FRED Data](docs/images/fred_data.png)
 
 ## Named Color Palette
 
@@ -129,7 +135,11 @@ chart = EconChart(
     Data(x=dates, y=values, name='GDP', color='teal'),
     Data(x=dates, y=values2, name='Forecast', color='coral', line_style='dashed'),
 )
+```
 
+![Named Colors](docs/images/named_colors.png)
+
+```python
 # Hex codes and RGB also work
 chart = EconChart(
     Data(x=dates, y=values, name='Custom', color='#ff00ff'),
@@ -255,6 +265,8 @@ chart = EconChart(Data(x=dates, y=values, name='Data'))
 board = EconBoard(chart, colors=custom_colors)
 board.show()
 ```
+
+![Custom Theme](docs/images/custom_theme.png)
 
 ## Documentation
 

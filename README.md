@@ -1,6 +1,6 @@
 # econcharts
 
-Python library for sharp, professional charts for economic data with dark theme support.
+Python library to make sharp, professional charts for economic data with dark theme support.
 
 ## Features
 
